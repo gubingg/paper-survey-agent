@@ -1,0 +1,1522 @@
+{
+  "paper_id": "paper_3f0b6055",
+  "title_guess": "MAUP: Training-free Multi-center Adaptive",
+  "pages": [
+    {
+      "page": 1,
+      "text": "MAUP: Training-free Multi-center Adaptive\n                  Uncertainty-aware Prompting for Cross-domain\n                     Few-shot Medical Image Segmentation\n\n\n                                        Yazhou Zhu1 and Haofeng Zhang1 (B)\n\n                               School of Computer Science and Engineering, Nanjing University of Science and\n                                    Technology, Nanjing 210094, China. {zyz_nj,zhanghf}@njust.edu.cn\n2025                          Abstract. Cross-domain Few-shot Medical Image Segmentation (CD-\n                             FSMIS) is a potential solution for segmenting medical images with lim-\n                                        ited annotation using knowledge from other domains. The significant\n                                  performance of current CD-FSMIS models relies on the heavily train-Aug                                     ing procedure over other source medical domains, which degrades the\n5                                universality and ease of model deployment. With the development of\n                                       large visual models of natural images, we propose a training-free CD-\n                           FSMIS model that introduces the Multi-center Adaptive Uncertainty-\n                                 aware Prompting (MAUP) strategy for adapting the foundation model\n                               Segment Anything Model (SAM), which is trained with natural images,\n                                       into the CD-FSMIS task. To be specific, MAUP consists of three key in-\n                                      novations: (1) K-means clustering based multi-center prompts generation[cs.CV]                                         for comprehensive spatial coverage, (2) uncertainty-aware prompts selec-\n                                      tion that focuses on the challenging regions, and (3) adaptive prompt\n                                    optimization that can dynamically adjust according to the target re-\n                                    gion complexity. With the pre-trained DINOv2 feature encoder, MAUP\n                                     achieves precise segmentation results across three medical datasets with-\n                                  out any additional training compared with several conventional CD-\n                           FSMIS models and training-free FSMIS model. The source code is avail-\n                                     able at: https://github.com/YazhouZhu19/MAUP.\n\n                            Keywords: Medical Image Segmentation  · Cross-domain  · Few-shot\n                                  Learning · Adaptive Prompting\n\n\n                  1  Introduction\n\n                         Medical Image Segmentation (MIS) has become a foundational technique inarXiv:2508.03511v1                  modern healthcare, disease diagnosis and treatment planning [2,27]. Traditional\n                         deep learning based MIS models fundamentally relay on the extensive annotated\n                          data which is both costly and time-consuming to acquire in medical imaging,\n                              especially in rare disease scans [25,17]. Besides, this problem is also compounded\n                        by the heterogeneity of medical scans, encompassing diverse modalities (e.g.,\n                      MRI, CT and X-Ray) and anatomical structures, which leads to the hard of\n                               intra-class generalization in semantic segmentation [8,24].\n                               Accordingly, Few-shot Medical Image Segmentation (FSMIS) is proposed to\n                           address these limitations, enhancing the model capability of segmenting with",
+      "blocks": [
+        {
+          "x0": 142.36000061035156,
+          "y0": 114.60015106201172,
+          "x1": 473.0111389160156,
+          "y1": 164.81231689453125,
+          "text": "MAUP: Training-free Multi-center Adaptive\nUncertainty-aware Prompting for Cross-domain\nFew-shot Medical Image Segmentation",
+          "block_no": 0
+        },
+        {
+          "x0": 224.697998046875,
+          "y0": 184.90721130371094,
+          "x1": 390.1573486328125,
+          "y1": 198.48480224609375,
+          "text": "Yazhou Zhu1 and Haofeng Zhang1 (B)",
+          "block_no": 1
+        },
+        {
+          "x0": 145.93002319335938,
+          "y0": 209.107177734375,
+          "x1": 469.45562744140625,
+          "y1": 230.52455139160156,
+          "text": "School of Computer Science and Engineering, Nanjing University of Science and\nTechnology, Nanjing 210094, China. {zyz_nj,zhanghf}@njust.edu.cn",
+          "block_no": 2
+        },
+        {
+          "x0": 163.1110382080078,
+          "y0": 254.34820556640625,
+          "x1": 452.313232421875,
+          "y1": 473.0263366699219,
+          "text": "Abstract. Cross-domain Few-shot Medical Image Segmentation (CD-\nFSMIS) is a potential solution for segmenting medical images with lim-\nited annotation using knowledge from other domains. The significant\nperformance of current CD-FSMIS models relies on the heavily train-\ning procedure over other source medical domains, which degrades the\nuniversality and ease of model deployment. With the development of\nlarge visual models of natural images, we propose a training-free CD-\nFSMIS model that introduces the Multi-center Adaptive Uncertainty-\naware Prompting (MAUP) strategy for adapting the foundation model\nSegment Anything Model (SAM), which is trained with natural images,\ninto the CD-FSMIS task. To be specific, MAUP consists of three key in-\nnovations: (1) K-means clustering based multi-center prompts generation\nfor comprehensive spatial coverage, (2) uncertainty-aware prompts selec-\ntion that focuses on the challenging regions, and (3) adaptive prompt\noptimization that can dynamically adjust according to the target re-\ngion complexity. With the pre-trained DINOv2 feature encoder, MAUP\nachieves precise segmentation results across three medical datasets with-\nout any additional training compared with several conventional CD-\nFSMIS models and training-free FSMIS model. The source code is avail-\nable at: https://github.com/YazhouZhu19/MAUP.",
+          "block_no": 3
+        },
+        {
+          "x0": 163.11097717285156,
+          "y0": 483.8919677734375,
+          "x1": 452.2519836425781,
+          "y1": 503.8173522949219,
+          "text": "Keywords: Medical Image Segmentation · Cross-domain · Few-shot\nLearning · Adaptive Prompting",
+          "block_no": 4
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 524.4552001953125,
+          "x1": 228.91221618652344,
+          "y1": 536.410400390625,
+          "text": "1\nIntroduction",
+          "block_no": 5
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 547.5519409179688,
+          "x1": 480.5765075683594,
+          "y1": 665.110595703125,
+          "text": "Medical Image Segmentation (MIS) has become a foundational technique in\nmodern healthcare, disease diagnosis and treatment planning [2,27]. Traditional\ndeep learning based MIS models fundamentally relay on the extensive annotated\ndata which is both costly and time-consuming to acquire in medical imaging,\nespecially in rare disease scans [25,17]. Besides, this problem is also compounded\nby the heterogeneity of medical scans, encompassing diverse modalities (e.g.,\nMRI, CT and X-Ray) and anatomical structures, which leads to the hard of\nintra-class generalization in semantic segmentation [8,24].\nAccordingly, Few-shot Medical Image Segmentation (FSMIS) is proposed to\naddress these limitations, enhancing the model capability of segmenting with",
+          "block_no": 6
+        },
+        {
+          "x0": 10.940000534057617,
+          "y0": 224.3499755859375,
+          "x1": 37.619998931884766,
+          "y1": 567.6500244140625,
+          "text": "arXiv:2508.03511v1  [cs.CV]  5 Aug 2025",
+          "block_no": 7
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "text": "2      Y. Zhu et al.\n\n\nlimited annotated images [30,20,26]. However, FSMIS still requires a large num-\nber of labeled samples in the same domain for model training [6,18], even if the\ntarget class for testing differs, e.g., both training and testing must be performed\non CT images. To solve this problem, some researchers have tried to implement\nmodel training using labeled samples from other medical domains and transfer\nthem to the target medical domain [28,23], e.g., training on CT and applying\nthe model to MR images, which is called Cross-domain FSMIS (CD-FSMIS).\nDespite the effectiveness of these CD-FSMIS methods [3,4,19], there are still\ntwo problems: (1) They require a large amount of precisely annotated images in\nthe medical domains, which are also usually scarce and need to be annotated\nby professional doctors; (2) A lot of model training for each application is still\nnecessary.\n\n   Recently, the Segment Anything Model (SAM) [10,7] has created the possi-\nbilities for training-free segmentation model with appropriate prompting strat-\negy [22], yet its direct application to CD-FSMIS still faces several critical chal-\nlenges: (1) Prompts (e.g., point prompts) need to capture the complete structure\nof complex medical objects; (2) Lack of boundary awareness leads to the seg-\nmentation ambiguity, especially in some low-contrast medical images, and (3)\nTraditional fixed prompting strategy always fails to adapt to varying anatomical\ncomplexities. In order to address these limitations, we introduce a novel training-\nfree few-shot medical image segmentation model with Multi-center Adaptive\nUncertainty-aware Prompting (MAUP) strategy for the SAM model. To be spe-\ncific, the MAUP strategy employs the point prompts and it consists of four com-\nponents: (1) A multi-center prompting strategy that employs K-means clustering\non high-similarity regions to make sure the spatial diversity in point prompts,\nleading to the comprehensive coverage of complex anatomical structures; (2)\nLeveraging the morphology based periphery similarity maps to generate nega-\ntive prompts, enhancing boundary delineation accuracy in low-contrast regions;\n(3) An uncertainty-aware prompt selection approach which identifies and focuses\non challenging regions with analyzing variance value across similarity maps; and\n(4) An adaptive point prompts quantity determination method that dynamically\nadjusts the number of point prompts based on target complexity.\n\n   Besides, MAUP employs the DINOv2 [14] as the feature encoder in few-shot\nsegmentation algorithm, enabling the both of discriminative and generalizable\ncapability of core features without requirement of model training. And the syn-\nergy of proposed four components make MAUP effectively handle diverse med-\nical imaging scenarios while maintaining the high segmentation accuracy. Our\nmethod achieves the precise segmentation results in three medical image datasets\nincluding the abdominal datasets Abd-MRI [9] and Abd-CT [11], and the car-\ndiac dataset Card-MRI [31]. In conclusion, the key contributions of our model\ncan be summarized as follows:\n\n    (1) We introduce a training-free model which addresses the limitations of\nexisting cross-domain few-shot medical image segmentation approaches via de-\nsigned innovative prompting strategy.",
+      "blocks": [
+        {
+          "x0": 134.76499938964844,
+          "y0": 91.82525634765625,
+          "x1": 219.51541137695312,
+          "y1": 100.79165649414062,
+          "text": "2\nY. Zhu et al.",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 118.02427673339844,
+          "x1": 480.61639404296875,
+          "y1": 259.4940185546875,
+          "text": "limited annotated images [30,20,26]. However, FSMIS still requires a large num-\nber of labeled samples in the same domain for model training [6,18], even if the\ntarget class for testing differs, e.g., both training and testing must be performed\non CT images. To solve this problem, some researchers have tried to implement\nmodel training using labeled samples from other medical domains and transfer\nthem to the target medical domain [28,23], e.g., training on CT and applying\nthe model to MR images, which is called Cross-domain FSMIS (CD-FSMIS).\nDespite the effectiveness of these CD-FSMIS methods [3,4,19], there are still\ntwo problems: (1) They require a large amount of precisely annotated images in\nthe medical domains, which are also usually scarce and need to be annotated\nby professional doctors; (2) A lot of model training for each application is still\nnecessary.",
+          "block_no": 1
+        },
+        {
+          "x0": 134.7649688720703,
+          "y0": 269.1703796386719,
+          "x1": 480.6263732910156,
+          "y1": 506.2817687988281,
+          "text": "Recently, the Segment Anything Model (SAM) [10,7] has created the possi-\nbilities for training-free segmentation model with appropriate prompting strat-\negy [22], yet its direct application to CD-FSMIS still faces several critical chal-\nlenges: (1) Prompts (e.g., point prompts) need to capture the complete structure\nof complex medical objects; (2) Lack of boundary awareness leads to the seg-\nmentation ambiguity, especially in some low-contrast medical images, and (3)\nTraditional fixed prompting strategy always fails to adapt to varying anatomical\ncomplexities. In order to address these limitations, we introduce a novel training-\nfree few-shot medical image segmentation model with Multi-center Adaptive\nUncertainty-aware Prompting (MAUP) strategy for the SAM model. To be spe-\ncific, the MAUP strategy employs the point prompts and it consists of four com-\nponents: (1) A multi-center prompting strategy that employs K-means clustering\non high-similarity regions to make sure the spatial diversity in point prompts,\nleading to the comprehensive coverage of complex anatomical structures; (2)\nLeveraging the morphology based periphery similarity maps to generate nega-\ntive prompts, enhancing boundary delineation accuracy in low-contrast regions;\n(3) An uncertainty-aware prompt selection approach which identifies and focuses\non challenging regions with analyzing variance value across similarity maps; and\n(4) An adaptive point prompts quantity determination method that dynamically\nadjusts the number of point prompts based on target complexity.",
+          "block_no": 2
+        },
+        {
+          "x0": 134.7649688720703,
+          "y0": 515.9581909179688,
+          "x1": 480.5925598144531,
+          "y1": 621.561767578125,
+          "text": "Besides, MAUP employs the DINOv2 [14] as the feature encoder in few-shot\nsegmentation algorithm, enabling the both of discriminative and generalizable\ncapability of core features without requirement of model training. And the syn-\nergy of proposed four components make MAUP effectively handle diverse med-\nical imaging scenarios while maintaining the high segmentation accuracy. Our\nmethod achieves the precise segmentation results in three medical image datasets\nincluding the abdominal datasets Abd-MRI [9] and Abd-CT [11], and the car-\ndiac dataset Card-MRI [31]. In conclusion, the key contributions of our model\ncan be summarized as follows:",
+          "block_no": 3
+        },
+        {
+          "x0": 134.7650146484375,
+          "y0": 631.2382202148438,
+          "x1": 480.5767517089844,
+          "y1": 665.1117553710938,
+          "text": "(1) We introduce a training-free model which addresses the limitations of\nexisting cross-domain few-shot medical image segmentation approaches via de-\nsigned innovative prompting strategy.",
+          "block_no": 4
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "text": "Title Suppressed Due to Excessive Length      3\n\n\n                           Support                                 Positive Prompting                        M : Merge\n                        Mask                                    Uncertainty Map                                                                                  : Frozen Weights\n                                                                                                                                 Positive Prompts          COS                                                                                                                                                                                                                        :                                                                                                                                              Cosine                                                                                                                                                                         Similarity                                                                                                                                             Selection      ....         SelectionRandomly2 Points\n Is                   Fs     RPG     COS                                                                                                     MAP                                                                                                                                                                                                                          :                                                                                                                           Masked                                                                                                                                               Average Pooling                                                                                  M                                                                                    Complexit                                                                                                ....\n\n                           Periphery Support Image          Encoder                                                             y                                                RPG  : Regional Prototype Generation                       Mask                         Similarity Maps                        Selection  .......         K-means    ...                Query Image\n                      Fs     MAP                   Mean Similarity Map\n                                                                      Negative                                                                      Prompts\n                                                       SAM                                      DINOv2\n                                    COS                                        Selection                                                                                                                             .                                                                                                                                                                                       .\n                                                                                                                                .                                                                                                                                              Query Result                                                                                           M                 ........                                                                                                                                     . ...Iq                   Fq\n  Query Image                            Negative Prompting                                       Prompts\n     Fig. 1. Overview of our proposed training-free CD-FSMIS model MAUP.\n\n    (2) We propose a prompting strategy MAUP which considers the spatial\ndiversity, boundary awareness, uncertainty guidance and adaptive point prompts\nquantity adjustment for enhancing the segmentation accuracy.\n    (3) The proposed model achieves state-of-the-art performance on three med-\nical imaging datasets widely used in research.\n\n\n2  Methodology\n\n2.1  Overall Architecture\n\nThe proposed MAUP strategy introduces a training-free approach for CD-FSMIS\nvia leveraging the foundational model Segment Anything Model (SAM). Given\nthe query image Iq and a selected support image Is with corresponding support\nmask Ms, our goal is to segment the target organs in Iq without any model\ntraining. The procedure begins with extracting discriminative features Fs and Fq\nfrom both query image Iq and support image Is using the pre-trained DINOv2\nencoder. These features are then employed to calculate similarity maps that\nguide the prompting strategy MAUP, which can dynamically create the optimal\npoint prompts for SAM model. As illustrated in Fig. 1, our method consists of\nthree main steps: (1) feature extraction and similarity computation, (2) MAUP\nprompting strategy, and (3) final mask prediction.\n\n\n2.2  Feature Extraction and Similarity Map Computation\n\nWe employ the frozen DINOv2 encoder [14] which is pre-trained as feature ex-\ntractor to obtain discriminative representations from both support and query\nimages considering its robust and generalizable extraction capability. For each\nimage, the features are first extracted through: Fs = E(Is), Fq = E(Iq), where\nE(·) denotes the DINOv2 encoder.\n   As shown in Fig. 2, for subsequent multi-center positive prompting strat-\negy, we employ the Region Prototype Generation (RPG) module used in RPT\n[29] to calculate multiple regional prototypes through the subdivisions in the\nforeground of the support image. Specifically, given a support image Is and cor-\nresponding foreground mask Ms, the foreground region of this image is obtained\nwith calculating their production. Then, the Voronoi-based partition method [1]",
+      "blocks": [
+        {
+          "x0": 277.4880065917969,
+          "y0": 91.82525634765625,
+          "x1": 480.5948791503906,
+          "y1": 100.79165649414062,
+          "text": "Title Suppressed Due to Excessive Length\n3",
+          "block_no": 0
+        },
+        {
+          "x0": 172.93907165527344,
+          "y0": 154.2005615234375,
+          "x1": 179.0108184814453,
+          "y1": 197.9971923828125,
+          "text": "DINOv2   Encoder",
+          "block_no": 1
+        },
+        {
+          "x0": 193.57748413085938,
+          "y0": 143.74639892578125,
+          "x1": 219.1965789794922,
+          "y1": 150.9432373046875,
+          "text": "Fs\nRPG",
+          "block_no": 2
+        },
+        {
+          "x0": 139.4788818359375,
+          "y0": 216.52268981933594,
+          "x1": 162.54795837402344,
+          "y1": 221.0894775390625,
+          "text": "Query Image",
+          "block_no": 3
+        },
+        {
+          "x0": 135.96295166015625,
+          "y0": 203.26344299316406,
+          "x1": 141.16897583007812,
+          "y1": 210.4602813720703,
+          "text": "Iq",
+          "block_no": 4
+        },
+        {
+          "x0": 137.8006134033203,
+          "y0": 156.93923950195312,
+          "x1": 164.14935302734375,
+          "y1": 161.5060272216797,
+          "text": "Support Image",
+          "block_no": 5
+        },
+        {
+          "x0": 136.27235412597656,
+          "y0": 143.17213439941406,
+          "x1": 140.56239318847656,
+          "y1": 150.3689727783203,
+          "text": "Is",
+          "block_no": 6
+        },
+        {
+          "x0": 190.51080322265625,
+          "y0": 122.34239196777344,
+          "x1": 205.97682189941406,
+          "y1": 126.9091796875,
+          "text": "Support",
+          "block_no": 7
+        },
+        {
+          "x0": 192.85476684570312,
+          "y0": 127.26470947265625,
+          "x1": 202.69789123535156,
+          "y1": 131.8314971923828,
+          "text": "Mask",
+          "block_no": 8
+        },
+        {
+          "x0": 194.0540771484375,
+          "y0": 204.68934631347656,
+          "x1": 200.44381713867188,
+          "y1": 211.88619995117188,
+          "text": "Fq",
+          "block_no": 9
+        },
+        {
+          "x0": 194.12049865722656,
+          "y0": 182.39439392089844,
+          "x1": 220.20799255371094,
+          "y1": 189.5912322998047,
+          "text": "MAP\nFs",
+          "block_no": 10
+        },
+        {
+          "x0": 188.03793334960938,
+          "y0": 161.79513549804688,
+          "x1": 206.69699096679688,
+          "y1": 166.36192321777344,
+          "text": "Periphery",
+          "block_no": 11
+        },
+        {
+          "x0": 191.97576904296875,
+          "y0": 166.7091064453125,
+          "x1": 201.82061767578125,
+          "y1": 171.28627014160156,
+          "text": "Mask",
+          "block_no": 12
+        },
+        {
+          "x0": 212.77059936523438,
+          "y0": 196.10888671875,
+          "x1": 219.20945739746094,
+          "y1": 199.58587646484375,
+          "text": "COS",
+          "block_no": 13
+        },
+        {
+          "x0": 228.9165802001953,
+          "y0": 144.04171752929688,
+          "x1": 235.35543823242188,
+          "y1": 147.51870727539062,
+          "text": "COS",
+          "block_no": 14
+        },
+        {
+          "x0": 453.1476135253906,
+          "y0": 203.02096557617188,
+          "x1": 476.5130310058594,
+          "y1": 207.59812927246094,
+          "text": "Query Result",
+          "block_no": 15
+        },
+        {
+          "x0": 265.2284240722656,
+          "y0": 198.24668884277344,
+          "x1": 275.595947265625,
+          "y1": 201.25660705566406,
+          "text": "Selection",
+          "block_no": 16
+        },
+        {
+          "x0": 242.49200439453125,
+          "y0": 167.00390625,
+          "x1": 269.5409851074219,
+          "y1": 171.3215789794922,
+          "text": "Similarity Maps",
+          "block_no": 17
+        },
+        {
+          "x0": 269.2014465332031,
+          "y0": 179.91004943847656,
+          "x1": 307.01043701171875,
+          "y1": 184.47683715820312,
+          "text": "Mean Similarity Map",
+          "block_no": 18
+        },
+        {
+          "x0": 296.9383239746094,
+          "y0": 166.82565307617188,
+          "x1": 314.57269287109375,
+          "y1": 175.41001892089844,
+          "text": "......\n.\nSelection",
+          "block_no": 19
+        },
+        {
+          "x0": 279.686767578125,
+          "y0": 152.03643798828125,
+          "x1": 295.19207763671875,
+          "y1": 155.9285888671875,
+          "text": "Complexit",
+          "block_no": 20
+        },
+        {
+          "x0": 286.5780029296875,
+          "y0": 156.2555694580078,
+          "x1": 288.3359680175781,
+          "y1": 160.14772033691406,
+          "text": "y",
+          "block_no": 21
+        },
+        {
+          "x0": 327.0972595214844,
+          "y0": 167.185302734375,
+          "x1": 337.10308837890625,
+          "y1": 170.19522094726562,
+          "text": "K-means",
+          "block_no": 22
+        },
+        {
+          "x0": 340.43048095703125,
+          "y0": 167.31398010253906,
+          "x1": 343.0010070800781,
+          "y1": 174.51150512695312,
+          "text": "...",
+          "block_no": 23
+        },
+        {
+          "x0": 272.5611267089844,
+          "y0": 126.03802490234375,
+          "x1": 302.7959289550781,
+          "y1": 130.6048126220703,
+          "text": "Uncertainty Map",
+          "block_no": 24
+        },
+        {
+          "x0": 296.84454345703125,
+          "y0": 137.15138244628906,
+          "x1": 344.7051086425781,
+          "y1": 145.97067260742188,
+          "text": "Selection\n....\nRandomly",
+          "block_no": 25
+        },
+        {
+          "x0": 327.6988830566406,
+          "y0": 136.88873291015625,
+          "x1": 351.1582336425781,
+          "y1": 140.36572265625,
+          "text": "Selection 2 Points",
+          "block_no": 26
+        },
+        {
+          "x0": 345.5207824707031,
+          "y0": 147.3434295654297,
+          "x1": 366.2413635253906,
+          "y1": 155.75013732910156,
+          "text": "....\nM",
+          "block_no": 27
+        },
+        {
+          "x0": 420.1055908203125,
+          "y0": 190.03240966796875,
+          "x1": 435.69525146484375,
+          "y1": 197.81671142578125,
+          "text": "SAM",
+          "block_no": 28
+        },
+        {
+          "x0": 355.3302307128906,
+          "y0": 135.91001892089844,
+          "x1": 385.0288391113281,
+          "y1": 140.476806640625,
+          "text": "Positive Prompts",
+          "block_no": 29
+        },
+        {
+          "x0": 277.9405212402344,
+          "y0": 196.25796508789062,
+          "x1": 285.5935363769531,
+          "y1": 207.57696533203125,
+          "text": ".\n.\n.",
+          "block_no": 30
+        },
+        {
+          "x0": 279.3195495605469,
+          "y0": 202.82887268066406,
+          "x1": 283.5308532714844,
+          "y1": 209.1708526611328,
+          "text": "...",
+          "block_no": 31
+        },
+        {
+          "x0": 269.1389465332031,
+          "y0": 188.30142211914062,
+          "x1": 300.4710998535156,
+          "y1": 192.8682098388672,
+          "text": "Negative Prompts",
+          "block_no": 32
+        },
+        {
+          "x0": 383.055419921875,
+          "y0": 199.61373901367188,
+          "x1": 385.8837585449219,
+          "y1": 208.03012084960938,
+          "text": "....",
+          "block_no": 33
+        },
+        {
+          "x0": 386.1103820800781,
+          "y0": 195.8760528564453,
+          "x1": 387.4815979003906,
+          "y1": 201.9477996826172,
+          "text": ".",
+          "block_no": 34
+        },
+        {
+          "x0": 383.7117004394531,
+          "y0": 201.95770263671875,
+          "x1": 389.8606872558594,
+          "y1": 209.0419464111328,
+          "text": "....",
+          "block_no": 35
+        },
+        {
+          "x0": 382.3795471191406,
+          "y0": 213.13905334472656,
+          "x1": 397.4424133300781,
+          "y1": 217.71621704101562,
+          "text": "Prompts",
+          "block_no": 36
+        },
+        {
+          "x0": 378.3752746582031,
+          "y0": 164.58055114746094,
+          "x1": 401.4444274902344,
+          "y1": 169.1473388671875,
+          "text": "Query Image",
+          "block_no": 37
+        },
+        {
+          "x0": 368.6166076660156,
+          "y0": 201.78997802734375,
+          "x1": 371.183349609375,
+          "y1": 204.79989624023438,
+          "text": "M",
+          "block_no": 38
+        },
+        {
+          "x0": 291.35968017578125,
+          "y0": 118.67355346679688,
+          "x1": 342.3863830566406,
+          "y1": 125.57563018798828,
+          "text": "Positive Prompting",
+          "block_no": 39
+        },
+        {
+          "x0": 244.52737426757812,
+          "y0": 212.99449157714844,
+          "x1": 297.935791015625,
+          "y1": 219.8965606689453,
+          "text": "Negative Prompting",
+          "block_no": 40
+        },
+        {
+          "x0": 406.2137145996094,
+          "y0": 156.1149444580078,
+          "x1": 473.87054443359375,
+          "y1": 160.68173217773438,
+          "text": "RPG\n: Regional Prototype Generation",
+          "block_no": 41
+        },
+        {
+          "x0": 405.79180908203125,
+          "y0": 147.0750732421875,
+          "x1": 462.8929138183594,
+          "y1": 151.64186096191406,
+          "text": "MAP : Masked Average Pooling",
+          "block_no": 42
+        },
+        {
+          "x0": 405.56524658203125,
+          "y0": 137.94534301757812,
+          "x1": 447.758056640625,
+          "y1": 142.61776733398438,
+          "text": "COS : Cosine Similarity",
+          "block_no": 43
+        },
+        {
+          "x0": 409.4640197753906,
+          "y0": 129.7219696044922,
+          "x1": 439.4423522949219,
+          "y1": 134.28875732421875,
+          "text": ": Frozen Weights",
+          "block_no": 44
+        },
+        {
+          "x0": 404.936279296875,
+          "y0": 122.40278625488281,
+          "x1": 423.0121154785156,
+          "y1": 127.07716369628906,
+          "text": "M : Merge",
+          "block_no": 45
+        },
+        {
+          "x0": 157.04800415039062,
+          "y0": 224.23126220703125,
+          "x1": 458.3044128417969,
+          "y1": 234.26876831054688,
+          "text": "Fig. 1. Overview of our proposed training-free CD-FSMIS model MAUP.",
+          "block_no": 46
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 246.5582733154297,
+          "x1": 480.5668029785156,
+          "y1": 304.34185791015625,
+          "text": "(2) We propose a prompting strategy MAUP which considers the spatial\ndiversity, boundary awareness, uncertainty guidance and adaptive point prompts\nquantity adjustment for enhancing the segmentation accuracy.\n(3) The proposed model achieves state-of-the-art performance on three med-\nical imaging datasets widely used in research.",
+          "block_no": 47
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 323.9294738769531,
+          "x1": 232.06837463378906,
+          "y1": 335.8846740722656,
+          "text": "2\nMethodology",
+          "block_no": 48
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 348.6227722167969,
+          "x1": 264.18914794921875,
+          "y1": 358.58538818359375,
+          "text": "2.1\nOverall Architecture",
+          "block_no": 49
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 367.7772521972656,
+          "x1": 480.5966491699219,
+          "y1": 497.291748046875,
+          "text": "The proposed MAUP strategy introduces a training-free approach for CD-FSMIS\nvia leveraging the foundational model Segment Anything Model (SAM). Given\nthe query image Iq and a selected support image Is with corresponding support\nmask Ms, our goal is to segment the target organs in Iq without any model\ntraining. The procedure begins with extracting discriminative features Fs and Fq\nfrom both query image Iq and support image Is using the pre-trained DINOv2\nencoder. These features are then employed to calculate similarity maps that\nguide the prompting strategy MAUP, which can dynamically create the optimal\npoint prompts for SAM model. As illustrated in Fig. 1, our method consists of\nthree main steps: (1) feature extraction and similarity computation, (2) MAUP\nprompting strategy, and (3) final mask prediction.",
+          "block_no": 50
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 516.441650390625,
+          "x1": 427.1571350097656,
+          "y1": 526.4042358398438,
+          "text": "2.2\nFeature Extraction and Similarity Map Computation",
+          "block_no": 51
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 535.59716796875,
+          "x1": 480.5922546386719,
+          "y1": 665.1117553710938,
+          "text": "We employ the frozen DINOv2 encoder [14] which is pre-trained as feature ex-\ntractor to obtain discriminative representations from both support and query\nimages considering its robust and generalizable extraction capability. For each\nimage, the features are first extracted through: Fs = E(Is), Fq = E(Iq), where\nE(·) denotes the DINOv2 encoder.\nAs shown in Fig. 2, for subsequent multi-center positive prompting strat-\negy, we employ the Region Prototype Generation (RPG) module used in RPT\n[29] to calculate multiple regional prototypes through the subdivisions in the\nforeground of the support image. Specifically, given a support image Is and cor-\nresponding foreground mask Ms, the foreground region of this image is obtained\nwith calculating their production. Then, the Voronoi-based partition method [1]",
+          "block_no": 52
+        }
+      ]
+    },
+    {
+      "page": 4,
+      "text": "4      Y. Zhu et al.\n\n\n                          Support Mask    Regional Masks\n\n                                           Partition                                                                                                                                 ෡𝐏𝒔\n                                                                                                 Pooling\n\n\n                                                                                                 Pooling\n\n                                  Fs           .                 Pooling\n                     …   …\n                                             .  : Element-wise Multiplication            Pooling\n\n            Fig. 2. The Regional Prototype Generation (RPG) module.\n\nis employed to divide foreground into Nf regions and forms a set of regional\nmasks {Vn}Nfn=1, where Nf is set as 30 according to the experiments. After that,\na set of regional prototypes ˆPs = {ˆpn}Nfn=1 , ˆpn ∈R1×C are generated with use\nof Masked Average Pooling (MAP). Formally,\n\n\n                            HW\n                                      1\n                      ˆpn = MAP(Fs, Vn) =  X Fs,iVn,i,                 (1)\n                                      |Vn|                                                i=1\n\nwhere Fs ∈RC×H×W denotes the support feature extracted by DINOv2 encoder.\nWith these regional prototypes, we can obtain the multi-center positive similarity\nmaps set Sp = {Sn}Nfn=1 through the cosine similarity computation:\n\n                        Sn = cos(Fq, ˆpn),                             (2)\n\nwhere Sn ∈RH×W denotes the single similarity map of each region.\n   Besides, for the negative prompts, we propose to use the periphery area of\norgan to select effective negative prompts, which are able to delineate the bound-\naries of target structure and surrounding tissues. The periphery area is extracted\nthrough a morphological approach. To specific, we first apply the morphological\ndilation operation δr(·) to the support mask Ms by using a circular structuring\nelement with radius r, the dilated support mask Mdilated is calculated as:\n\n                             Mdilated = δr(Ms).                            (3)\n\n   Then, the periphery support mask ˜Ms is obtained by subtracting the original\nsupport mask Ms from the dilated mask Mdilated, written as: ˜Ms = Mdilated −\nMs, where ˜Ms ∈RH×W . Therefore, the periphery prototype is obtained by: ˜P =\nMAP(Fs, ˜Ms), where ˜P ∈R1×C and the negative similarity map is calculated\nby: ˜S = cos(Fq, ˜P).\n\n\n2.3  Multi-center Adaptive Uncertainty-aware Prompting\n\nPositive Prompting Strategy. The positive prompting strategy of MAUP\nemploys a two-path approach to identify the optimal point prompts that guide\nthe SAM model to segment target regions. As illustrated in Fig. 1, we design\na two-path of prompting strategy which consists of mean similarity map based",
+      "blocks": [
+        {
+          "x0": 134.76499938964844,
+          "y0": 91.82525634765625,
+          "x1": 219.51541137695312,
+          "y1": 100.79165649414062,
+          "text": "4\nY. Zhu et al.",
+          "block_no": 0
+        },
+        {
+          "x0": 230.49024963378906,
+          "y0": 116.95633697509766,
+          "x1": 275.2724914550781,
+          "y1": 125.05532836914062,
+          "text": "Support Mask",
+          "block_no": 1
+        },
+        {
+          "x0": 269.2171325683594,
+          "y0": 132.9909210205078,
+          "x1": 297.1209716796875,
+          "y1": 141.08990478515625,
+          "text": "Partition",
+          "block_no": 2
+        },
+        {
+          "x0": 278.142822265625,
+          "y0": 171.67616271972656,
+          "x1": 314.72119140625,
+          "y1": 185.47500610351562,
+          "text": "Fs\n.",
+          "block_no": 3
+        },
+        {
+          "x0": 287.62945556640625,
+          "y0": 117.46846771240234,
+          "x1": 337.4305419921875,
+          "y1": 125.56745910644531,
+          "text": "Regional Masks",
+          "block_no": 4
+        },
+        {
+          "x0": 338.38983154296875,
+          "y0": 185.04661560058594,
+          "x1": 348.2760009765625,
+          "y1": 194.77711486816406,
+          "text": "…",
+          "block_no": 5
+        },
+        {
+          "x0": 354.3223571777344,
+          "y0": 143.0557403564453,
+          "x1": 370.2140808105469,
+          "y1": 148.4820556640625,
+          "text": "Pooling",
+          "block_no": 6
+        },
+        {
+          "x0": 354.3223571777344,
+          "y0": 158.32212829589844,
+          "x1": 370.2140808105469,
+          "y1": 163.74844360351562,
+          "text": "Pooling",
+          "block_no": 7
+        },
+        {
+          "x0": 353.6212463378906,
+          "y0": 173.02761840820312,
+          "x1": 369.5129699707031,
+          "y1": 178.4539337158203,
+          "text": "Pooling",
+          "block_no": 8
+        },
+        {
+          "x0": 354.7613220214844,
+          "y0": 195.10935974121094,
+          "x1": 370.6660461425781,
+          "y1": 200.5518798828125,
+          "text": "Pooling",
+          "block_no": 9
+        },
+        {
+          "x0": 374.06219482421875,
+          "y0": 185.79042053222656,
+          "x1": 383.9483642578125,
+          "y1": 195.5209197998047,
+          "text": "…",
+          "block_no": 10
+        },
+        {
+          "x0": 243.36668395996094,
+          "y0": 193.47682189941406,
+          "x1": 328.65399169921875,
+          "y1": 203.36300659179688,
+          "text": ": Element-wise Multiplication \n.",
+          "block_no": 11
+        },
+        {
+          "x0": 375.27703857421875,
+          "y0": 136.03514099121094,
+          "x1": 380.8828430175781,
+          "y1": 144.09747314453125,
+          "text": "෡𝐏𝒔",
+          "block_no": 12
+        },
+        {
+          "x0": 186.9239959716797,
+          "y0": 211.9132080078125,
+          "x1": 428.4349365234375,
+          "y1": 221.95071411132812,
+          "text": "Fig. 2. The Regional Prototype Generation (RPG) module.",
+          "block_no": 13
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 231.7659149169922,
+          "x1": 480.60137939453125,
+          "y1": 281.83489990234375,
+          "text": "is employed to divide foreground into Nf regions and forms a set of regional\nmasks {Vn}Nf\nn=1, where Nf is set as 30 according to the experiments. After that,\na set of regional prototypes ˆPs = {ˆpn}Nf\nn=1 , ˆpn ∈R1×C are generated with use\nof Masked Average Pooling (MAP). Formally,",
+          "block_no": 14
+        },
+        {
+          "x0": 218.1219940185547,
+          "y0": 296.9100036621094,
+          "x1": 338.4075927734375,
+          "y1": 321.2875671386719,
+          "text": "ˆpn = MAP(Fs, Vn) =\n1\n|Vn|",
+          "block_no": 15
+        },
+        {
+          "x0": 341.260986328125,
+          "y0": 293.5317687988281,
+          "x1": 356.2739562988281,
+          "y1": 311.31097412109375,
+          "text": "HW\nX",
+          "block_no": 16
+        },
+        {
+          "x0": 342.6199951171875,
+          "y0": 303.64996337890625,
+          "x1": 480.59619140625,
+          "y1": 324.7135925292969,
+          "text": "i=1\nFs,iVn,i,\n(1)",
+          "block_no": 17
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 332.2632751464844,
+          "x1": 480.5966491699219,
+          "y1": 373.60888671875,
+          "text": "where Fs ∈RC×H×W denotes the support feature extracted by DINOv2 encoder.\nWith these regional prototypes, we can obtain the multi-center positive similarity\nmaps set Sp = {Sn}Nf\nn=1 through the cosine similarity computation:",
+          "block_no": 18
+        },
+        {
+          "x0": 269.30303955078125,
+          "y0": 382.8819580078125,
+          "x1": 480.5972595214844,
+          "y1": 394.4775390625,
+          "text": "Sn = cos(Fq, ˆpn),\n(2)",
+          "block_no": 19
+        },
+        {
+          "x0": 134.7650146484375,
+          "y0": 401.4612731933594,
+          "x1": 480.5916442871094,
+          "y1": 488.3268127441406,
+          "text": "where Sn ∈RH×W denotes the single similarity map of each region.\nBesides, for the negative prompts, we propose to use the periphery area of\norgan to select effective negative prompts, which are able to delineate the bound-\naries of target structure and surrounding tissues. The periphery area is extracted\nthrough a morphological approach. To specific, we first apply the morphological\ndilation operation δr(·) to the support mask Ms by using a circular structuring\nelement with radius r, the dilated support mask Mdilated is calculated as:",
+          "block_no": 20
+        },
+        {
+          "x0": 265.7120056152344,
+          "y0": 498.90191650390625,
+          "x1": 480.5971984863281,
+          "y1": 510.3584899902344,
+          "text": "Mdilated = δr(Ms).\n(3)",
+          "block_no": 21
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 518.4619140625,
+          "x1": 480.5939636230469,
+          "y1": 579.632568359375,
+          "text": "Then, the periphery support mask ˜Ms is obtained by subtracting the original\nsupport mask Ms from the dilated mask Mdilated, written as: ˜Ms = Mdilated −\nMs, where ˜Ms ∈RH×W . Therefore, the periphery prototype is obtained by: ˜P =\nMAP(Fs, ˜Ms), where ˜P ∈R1×C and the negative similarity map is calculated\nby: ˜S = cos(Fq, ˜P).",
+          "block_no": 22
+        },
+        {
+          "x0": 134.76504516601562,
+          "y0": 599.0407104492188,
+          "x1": 426.3901062011719,
+          "y1": 609.0032958984375,
+          "text": "2.3\nMulti-center Adaptive Uncertainty-aware Prompting",
+          "block_no": 23
+        },
+        {
+          "x0": 134.76504516601562,
+          "y0": 619.28076171875,
+          "x1": 480.59442138671875,
+          "y1": 665.11083984375,
+          "text": "Positive Prompting Strategy. The positive prompting strategy of MAUP\nemploys a two-path approach to identify the optimal point prompts that guide\nthe SAM model to segment target regions. As illustrated in Fig. 1, we design\na two-path of prompting strategy which consists of mean similarity map based",
+          "block_no": 24
+        }
+      ]
+    },
+    {
+      "page": 5,
+      "text": "Title Suppressed Due to Excessive Length      5\n\n\nprompting and uncertainty map based prompting. Specifically, the mean simi-\nlarity map is calculated over similarity maps Sp = {Sn}Nfn=1, written as:\n\n                                     Nf\n                                 1\n                          υ(x, y) = X Sn(x, y),                        (4)\n                           Nf                                   n=1\nwhere υ ∈RH×W . Based on mean similarity map υ, we first perform pixel\nselection according to the highest similarity values from υ, which effectively\nidentifies regions with the highest probability of containing the target anatomical\nstructure. We employ Qmean represent this set of candidate pixels:\n\n                 Qmean = {(x, y)|υ(x, y) ≥τmean} ,                    (5)\n\nwhere τmean is the threshold value corresponding to the 95th percentile of υ. To\nensure spatial diversity among selected prompts, we apply K-means clustering\nto Qmean with k clusters. The centroids of these clusters are then selected as our\nmean similarity-based positive prompts, which ensures comprehensive coverage\nof the target region while avoiding redundant prompts in the same local area.\nThe number of clusters k is adaptively determined based on the complexity C\nof target region, which is computed as:\n\n               C = Area(υ) + Perimeter(υ),                       (6)\n\nwhere Area(·) and Perimeter(·) measure the area and boundary length of regions.\nThen, the number of clusters k is determined as:\n\n                  k = max(Nmin, min(Nmax, ⌊γ · C⌋)),                   (7)\n\nwhere Nmin = 3 and Nmax = 10 are the minimum and maximum numbers of\nallowed prompts and γ is a scaling factor.\n   For the uncertainty map path, the uncertainty map is from the variance\ncalculation over similarity maps Sp = {Sn}Nfn=1 and identifies the challenging\nregions which require special attention, and the uncertainty map is calculated\nas:\n                                Nf\n                            1\n                 U(x, y) = X (Sn(x, y) −υ(x, y))2,                  (8)\n                       Nf                              n=1\nwhere U ∈RH×W . We similarly perform the pixels selection with the highest\nuncertainty values from U representing regions where the model has the highest\ndecision variance:\n\n                    Quncert = {(x, y)|U(x, y) ≥τuncert} ,                   (9)\n\nwhere τuncert  is the threshold value corresponding to the 95th percentile of\nU. From Quncert, we randomly select 2 points as uncertainty-based positive\nprompts. These prompts specifically target challenging regions that require spe-\ncial attention during segmentation.\n    Finally, the positive point prompts set Qpos can be obtained through merging\ntwo point prompt sets Qmean and Quncert directly:\n\n                        Qpos = Qmean ∪Quncert.                       (10)",
+      "blocks": [
+        {
+          "x0": 277.4880065917969,
+          "y0": 91.82525634765625,
+          "x1": 480.5948791503906,
+          "y1": 100.79165649414062,
+          "text": "Title Suppressed Due to Excessive Length\n5",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 118.02427673339844,
+          "x1": 480.54669189453125,
+          "y1": 143.1346435546875,
+          "text": "prompting and uncertainty map based prompting. Specifically, the mean simi-\nlarity map is calculated over similarity maps Sp = {Sn}Nf\nn=1, written as:",
+          "block_no": 1
+        },
+        {
+          "x0": 250.82894897460938,
+          "y0": 153.1980438232422,
+          "x1": 306.0504150390625,
+          "y1": 177.5755615234375,
+          "text": "υ(x, y) =\n1\nNf",
+          "block_no": 2
+        },
+        {
+          "x0": 310.49700927734375,
+          "y0": 148.6797637939453,
+          "x1": 324.8929748535156,
+          "y1": 167.59890747070312,
+          "text": "Nf\nX",
+          "block_no": 3
+        },
+        {
+          "x0": 310.1860046386719,
+          "y0": 159.9379119873047,
+          "x1": 480.59619140625,
+          "y1": 180.88153076171875,
+          "text": "n=1\nSn(x, y),\n(4)",
+          "block_no": 4
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 183.91026306152344,
+          "x1": 480.59954833984375,
+          "y1": 234.847900390625,
+          "text": "where υ ∈RH×W . Based on mean similarity map υ, we first perform pixel\nselection according to the highest similarity values from υ, which effectively\nidentifies regions with the highest probability of containing the target anatomical\nstructure. We employ Qmean represent this set of candidate pixels:",
+          "block_no": 5
+        },
+        {
+          "x0": 232.99398803710938,
+          "y0": 240.77284240722656,
+          "x1": 480.5961608886719,
+          "y1": 252.35955810546875,
+          "text": "Qmean = {(x, y)|υ(x, y) ≥τmean} ,\n(5)",
+          "block_no": 6
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 258.42498779296875,
+          "x1": 480.5956115722656,
+          "y1": 340.1308288574219,
+          "text": "where τmean is the threshold value corresponding to the 95th percentile of υ. To\nensure spatial diversity among selected prompts, we apply K-means clustering\nto Qmean with k clusters. The centroids of these clusters are then selected as our\nmean similarity-based positive prompts, which ensures comprehensive coverage\nof the target region while avoiding redundant prompts in the same local area.\nThe number of clusters k is adaptively determined based on the complexity C\nof target region, which is computed as:",
+          "block_no": 7
+        },
+        {
+          "x0": 244.50794982910156,
+          "y0": 347.6799011230469,
+          "x1": 480.59613037109375,
+          "y1": 357.6548156738281,
+          "text": "C = Area(υ) + Perimeter(υ),\n(6)",
+          "block_no": 8
+        },
+        {
+          "x0": 134.76492309570312,
+          "y0": 365.07379150390625,
+          "x1": 480.5691223144531,
+          "y1": 387.1328125,
+          "text": "where Area(·) and Perimeter(·) measure the area and boundary length of regions.\nThen, the number of clusters k is determined as:",
+          "block_no": 9
+        },
+        {
+          "x0": 228.49591064453125,
+          "y0": 394.5517883300781,
+          "x1": 480.5961608886719,
+          "y1": 405.48553466796875,
+          "text": "k = max(Nmin, min(Nmax, ⌊γ · C⌋)),\n(7)",
+          "block_no": 10
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 412.20391845703125,
+          "x1": 480.5768127441406,
+          "y1": 483.1557922363281,
+          "text": "where Nmin = 3 and Nmax = 10 are the minimum and maximum numbers of\nallowed prompts and γ is a scaling factor.\nFor the uncertainty map path, the uncertainty map is from the variance\ncalculation over similarity maps Sp = {Sn}Nf\nn=1 and identifies the challenging\nregions which require special attention, and the uncertainty map is calculated\nas:",
+          "block_no": 11
+        },
+        {
+          "x0": 223.49896240234375,
+          "y0": 486.7919006347656,
+          "x1": 281.79339599609375,
+          "y1": 511.1695556640625,
+          "text": "U(x, y) =\n1\nNf",
+          "block_no": 12
+        },
+        {
+          "x0": 286.2409973144531,
+          "y0": 482.2747497558594,
+          "x1": 300.636962890625,
+          "y1": 501.1939392089844,
+          "text": "Nf\nX",
+          "block_no": 13
+        },
+        {
+          "x0": 285.92999267578125,
+          "y0": 491.7547302246094,
+          "x1": 480.5961608886719,
+          "y1": 514.4755859375,
+          "text": "n=1\n(Sn(x, y) −υ(x, y))2,\n(8)",
+          "block_no": 14
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 515.2772827148438,
+          "x1": 480.5965881347656,
+          "y1": 552.765869140625,
+          "text": "where U ∈RH×W . We similarly perform the pixels selection with the highest\nuncertainty values from U representing regions where the model has the highest\ndecision variance:",
+          "block_no": 15
+        },
+        {
+          "x0": 227.65396118164062,
+          "y0": 560.1847534179688,
+          "x1": 480.5961608886719,
+          "y1": 571.771484375,
+          "text": "Quncert = {(x, y)|U(x, y) ≥τuncert} ,\n(9)",
+          "block_no": 16
+        },
+        {
+          "x0": 134.7649383544922,
+          "y0": 577.8369140625,
+          "x1": 480.5716857910156,
+          "y1": 649.0828247070312,
+          "text": "where τuncert is the threshold value corresponding to the 95th percentile of\nU. From Quncert, we randomly select 2 points as uncertainty-based positive\nprompts. These prompts specifically target challenging regions that require spe-\ncial attention during segmentation.\nFinally, the positive point prompts set Qpos can be obtained through merging\ntwo point prompt sets Qmean and Quncert directly:",
+          "block_no": 17
+        },
+        {
+          "x0": 253.26893615722656,
+          "y0": 655.0067749023438,
+          "x1": 480.5974426269531,
+          "y1": 666.593505859375,
+          "text": "Qpos = Qmean ∪Quncert.\n(10)",
+          "block_no": 18
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "text": "6      Y. Zhu et al.\n\nTable 1. Quantitative Comparison (in Dice score %) of different methods on Abd-\nMRI and Abd-CT. The best is shown in bold and the second-best is underlined.\n\n\n                           Abd-MRI                 Abd-CT  Method        Ref.\n                               Liver  LK  RK   Spleen Mean  Liver  LK  RK   Spleen Mean\n\n  PANet [21]   ICCV’19     39.24  26.47  37.35  26.79  32.46  40.29  30.61  26.66  30.21  31.94\n  SSL-ALP [16] TMI’22      70.74  55.49  67.43  58.39  63.01  71.38  34.48  32.32  51.67  47.46\n RPT [29]     MICCAI’23  49.22  42.45  47.14  48.84  46.91  65.87  40.07  35.97  51.22  48.28\n  PATNet [12]  ECCV’22    57.01  50.23  53.01  51.63  52.97  75.94  46.62  42.68  63.94  57.29\n  IFA [13]     CVPR’24    50.22  35.99  34.00  42.21  40.61  46.62  25.13  26.56  24.85  30.79\n  FAMNet [3]   AAAI’25     73.01  57.28  74.68  58.21  65.79  73.57  57.79  61.89  65.78  64.75\n  Ours                    78.16 58.23  72.34  59.65 67.09 78.25 59.41 71.80  60.38  67.46\n\n\nNegative Prompting Strategy. The negative prompting strategy is crucial\nfor accurate boundary delineation, especially in medical images where target\norgans often have similar intensity profiles to surrounding tissues. As shown in\nFig. 1, our negative prompting strategy leverages the periphery similarity map\n˜S to identify regions that should be excluded from the segmentation.\n   From the periphery similarity map ˜S, we perform the pixel selection according\nto the highest similarity values. These pixels represent regions in the query image\nthat are most similar to the periphery of the target organ in the support image.\nFormally, the set of candidate negative prompts Qneg is defined as:\n\n                     n             o                    Qneg =  (x, y)|˜S(x, y) ≥τneg   ,                   (11)\n\nwhere τneg is the threshold value corresponding to the 95th percentile of ˜S.\n\n\n2.4  Query Mask Prediction\n\nAfter generating both positive and negative prompts through MAUP, the final\nstep is to feed these prompts into the SAM model to obtain the segmentation\nmask for the query image. As illustrated in Fig. 1, the positive prompts guide the\nSAM model to include the target regions in the segmentation, while the negative\nprompts help exclude surrounding tissues and refine the boundaries.\n\n\n3  Experiments\n\n3.1  Datasets and Implementation Details\n\nDatasets. We evaluate our proposed method on three diverse medical imaging\ndatasets that represent different modalities and anatomical structures. To be\nspecific, Abd-MRI consists of 20 cases of abdominal MRI scans from the ISBI\n2019 Combined Healthy Organ Segmentation challenge (CHAOS) [9] and Abd-\nCT consists of 20 cases of abdominal CT scans from the MICCAI 2015 multi-\natlas labeling Beyond The Cranial Vault challenge (BTCV) [11]. The Card-\nMRI contains 45 cases of cardiac MRI scans collected from the MICCAI 2019\nMulti-Sequence Cardiac MRI Segmentation Challenge [31].",
+      "blocks": [
+        {
+          "x0": 134.76499938964844,
+          "y0": 91.82525634765625,
+          "x1": 219.51541137695312,
+          "y1": 100.79165649414062,
+          "text": "6\nY. Zhu et al.",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 114.490234375,
+          "x1": 480.5874938964844,
+          "y1": 135.48672485351562,
+          "text": "Table 1. Quantitative Comparison (in Dice score %) of different methods on Abd-\nMRI and Abd-CT. The best is shown in bold and the second-best is underlined.",
+          "block_no": 1
+        },
+        {
+          "x0": 142.15908813476562,
+          "y0": 148.1368865966797,
+          "x1": 434.44287109375,
+          "y1": 158.96795654296875,
+          "text": "Method\nRef.\nAbd-MRI\nAbd-CT",
+          "block_no": 2
+        },
+        {
+          "x0": 236.9098358154297,
+          "y0": 160.03250122070312,
+          "x1": 477.40692138671875,
+          "y1": 167.29330444335938,
+          "text": "Liver\nLK\nRK\nSpleen Mean\nLiver\nLK\nRK\nSpleen Mean",
+          "block_no": 3
+        },
+        {
+          "x0": 142.15908813476562,
+          "y0": 172.95657348632812,
+          "x1": 478.19622802734375,
+          "y1": 234.33018493652344,
+          "text": "PANet [21]\nICCV’19\n39.24\n26.47\n37.35\n26.79\n32.46\n40.29\n30.61\n26.66\n30.21\n31.94\nSSL-ALP [16] TMI’22\n70.74\n55.49\n67.43\n58.39\n63.01\n71.38\n34.48\n32.32\n51.67\n47.46\nRPT [29]\nMICCAI’23\n49.22\n42.45\n47.14\n48.84\n46.91\n65.87\n40.07\n35.97\n51.22\n48.28\nPATNet [12]\nECCV’22\n57.01\n50.23\n53.01\n51.63\n52.97\n75.94\n46.62\n42.68\n63.94\n57.29\nIFA [13]\nCVPR’24\n50.22\n35.99\n34.00\n42.21\n40.61\n46.62\n25.13\n26.56\n24.85\n30.79\nFAMNet [3]\nAAAI’25\n73.01\n57.28\n74.68\n58.21\n65.79\n73.57\n57.79\n61.89\n65.78\n64.75\nOurs\n78.16 58.23\n72.34\n59.65 67.09 78.25 59.41 71.80\n60.38\n67.46",
+          "block_no": 4
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 256.90777587890625,
+          "x1": 480.6165466308594,
+          "y1": 364.0077819824219,
+          "text": "Negative Prompting Strategy. The negative prompting strategy is crucial\nfor accurate boundary delineation, especially in medical images where target\norgans often have similar intensity profiles to surrounding tissues. As shown in\nFig. 1, our negative prompting strategy leverages the periphery similarity map\n˜S to identify regions that should be excluded from the segmentation.\nFrom the periphery similarity map ˜S, we perform the pixel selection according\nto the highest similarity values. These pixels represent regions in the query image\nthat are most similar to the periphery of the target organ in the support image.\nFormally, the set of candidate negative prompts Qneg is defined as:",
+          "block_no": 5
+        },
+        {
+          "x0": 238.27496337890625,
+          "y0": 372.853271484375,
+          "x1": 480.59747314453125,
+          "y1": 388.2054443359375,
+          "text": "Qneg =\nn\n(x, y)|˜S(x, y) ≥τneg\no\n,\n(11)",
+          "block_no": 6
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 399.7808532714844,
+          "x1": 463.1945495605469,
+          "y1": 413.7957458496094,
+          "text": "where τneg is the threshold value corresponding to the 95th percentile of ˜S.",
+          "block_no": 7
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 431.378662109375,
+          "x1": 278.65478515625,
+          "y1": 441.3412780761719,
+          "text": "2.4\nQuery Mask Prediction",
+          "block_no": 8
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 450.46112060546875,
+          "x1": 480.5964660644531,
+          "y1": 508.24468994140625,
+          "text": "After generating both positive and negative prompts through MAUP, the final\nstep is to feed these prompts into the SAM model to obtain the segmentation\nmask for the query image. As illustrated in Fig. 1, the positive prompts guide the\nSAM model to include the target regions in the segmentation, while the negative\nprompts help exclude surrounding tissues and refine the boundaries.",
+          "block_no": 9
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 527.75927734375,
+          "x1": 229.01976013183594,
+          "y1": 539.7144775390625,
+          "text": "3\nExperiments",
+          "block_no": 10
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 552.379638671875,
+          "x1": 347.94464111328125,
+          "y1": 562.3422241210938,
+          "text": "3.1\nDatasets and Implementation Details",
+          "block_no": 11
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 571.4595947265625,
+          "x1": 480.5940246582031,
+          "y1": 665.1107177734375,
+          "text": "Datasets. We evaluate our proposed method on three diverse medical imaging\ndatasets that represent different modalities and anatomical structures. To be\nspecific, Abd-MRI consists of 20 cases of abdominal MRI scans from the ISBI\n2019 Combined Healthy Organ Segmentation challenge (CHAOS) [9] and Abd-\nCT consists of 20 cases of abdominal CT scans from the MICCAI 2015 multi-\natlas labeling Beyond The Cranial Vault challenge (BTCV) [11]. The Card-\nMRI contains 45 cases of cardiac MRI scans collected from the MICCAI 2019\nMulti-Sequence Cardiac MRI Segmentation Challenge [31].",
+          "block_no": 12
+        }
+      ]
+    },
+    {
+      "page": 7,
+      "text": "Title Suppressed Due to Excessive Length      7\n\nTable 2. Quantitative Comparison (in Dice score %) of different methods on Card-\nMRI. The best value is shown in bold font, and the second-best value is underlined.\n\n\n                                                 Card-MRI\n              Method         Ref.\n                                    LV-BP  LV-MYO   RV   Mean\n\n              PANet [21]     ICCV’19       51.42      25.75     25.75    36.66\n             SSL-ALP [16]  TMI’22        83.47      22.73     66.21    57.47\n           RPT [29]      MICCAI’23    60.84      42.28     57.30    53.47\n             PATNet [12]   ECCV’22      65.35      50.63     68.34    61.44\n              IFA [13]      CVPR’24      50.43      31.32     30.74    37.50\n             FAMNet [3]    AAAI’25      86.64      51.82     76.26    71.58\n               Ours                       88.36    52.74    78.29  73.13\n\n\n\n\n\n   Support  Ground Truth   RPT     FAMNet   MAUP      Support  Ground Truth   RPT     FAMNet   MAUP      Support  Ground Truth   RPT    FAMNet   MAUP\n\n\n\n\n      Liver                                                                            Liver                                                          LV-BP\n\n\n\n\n  Right Kidney                                                                 Right Kidney                                                LV-MYO\n\n\n\n\n    Left Kidney                                                                         Left Kidney                                                RV\n                                                                         Card-MRI\n\n\n\n      Spleen                                                                     Spleen\n           Abd-MRI                        Abd-CT\n\nFig. 3. The qualitative results of our model and compared models in datasets: Abd-\nMRI, Abd-CT and Card-MRI.\n\n\nImplementation Details. We employ the pretrained DINOv2-ViT-L/14 [14]\nas the feature extractor E(·) for the high-quality visual representation. For seg-\nmentation component, we utilize the SAM-ViT-H as encoder of the SAM model,\nwhich leads to the excellent segmentation performance in our task. For a compar-\nison, the metric used to evaluate the performance of 2D slices on 3D volumetric\nground-truth is the Dice score [5]. Our model is implemented with the PyTorch\nv1.12 framework, and all of experiments are conducted on a workstation with\nan NVIDIA 3090 GPU with 24GB memory. To simulate the scarcity of labeled\ndata in medical scenarios, all experiments embrace the 1-way 1-shot setting.\n\n\n3.2  Quantitative and Qualitative Results\n\nTable 1 and Table 2 presents a comprehensive performance comparison between\nour proposed model and several Few-shot Medical Image Segmentation (FSMIS)\nmodels, including PANet [21], SSL-ALP [15], RPT [29], IFA [13] and FAMNet\n[3]. The average dice scores of target organs or regions are compared in this table.\nFor a fair comparison, it is important to note that PANet, SSL-ALP, RPT, IFA\nand FAMNet all employ medical image datasets as source domain and fine-tune\nthe models on them, while ours directly inferences on three target medical image\ndatasets (Abd-MRI, Abd-CT and Card-MRI) in a training-free manner, which\nis much harder than these methods. From the two tables, it can be seen that the",
+      "blocks": [
+        {
+          "x0": 277.4880065917969,
+          "y0": 91.82525634765625,
+          "x1": 480.5948791503906,
+          "y1": 100.79165649414062,
+          "text": "Title Suppressed Due to Excessive Length\n7",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 114.490234375,
+          "x1": 480.581298828125,
+          "y1": 135.48672485351562,
+          "text": "Table 2. Quantitative Comparison (in Dice score %) of different methods on Card-\nMRI. The best value is shown in bold font, and the second-best value is underlined.",
+          "block_no": 1
+        },
+        {
+          "x0": 195.0723419189453,
+          "y0": 147.34609985351562,
+          "x1": 378.12066650390625,
+          "y1": 159.23178100585938,
+          "text": "Method\nRef.\nCard-MRI",
+          "block_no": 2
+        },
+        {
+          "x0": 299.7283935546875,
+          "y0": 160.31344604492188,
+          "x1": 421.50970458984375,
+          "y1": 167.69100952148438,
+          "text": "LV-BP\nLV-MYO\nRV\nMean",
+          "block_no": 3
+        },
+        {
+          "x0": 195.0723419189453,
+          "y0": 173.44534301757812,
+          "x1": 422.2839660644531,
+          "y1": 235.80575561523438,
+          "text": "PANet [21]\nICCV’19\n51.42\n25.75\n25.75\n36.66\nSSL-ALP [16]\nTMI’22\n83.47\n22.73\n66.21\n57.47\nRPT [29]\nMICCAI’23\n60.84\n42.28\n57.30\n53.47\nPATNet [12]\nECCV’22\n65.35\n50.63\n68.34\n61.44\nIFA [13]\nCVPR’24\n50.43\n31.32\n30.74\n37.50\nFAMNet [3]\nAAAI’25\n86.64\n51.82\n76.26\n71.58\nOurs\n88.36\n52.74\n78.29\n73.13",
+          "block_no": 4
+        },
+        {
+          "x0": 141.22122192382812,
+          "y0": 262.7225036621094,
+          "x1": 242.93392944335938,
+          "y1": 267.8408508300781,
+          "text": "Support\nGround Truth\nMAUP\nRPT\nFAMNet",
+          "block_no": 5
+        },
+        {
+          "x0": 143.7351531982422,
+          "y0": 284.3592224121094,
+          "x1": 150.82200622558594,
+          "y1": 287.9695129394531,
+          "text": "Liver",
+          "block_no": 6
+        },
+        {
+          "x0": 138.18313598632812,
+          "y0": 307.42041015625,
+          "x1": 155.8621826171875,
+          "y1": 311.01995849609375,
+          "text": "Right Kidney",
+          "block_no": 7
+        },
+        {
+          "x0": 140.0079345703125,
+          "y0": 330.1331787109375,
+          "x1": 155.60594177246094,
+          "y1": 333.73272705078125,
+          "text": "Left Kidney",
+          "block_no": 8
+        },
+        {
+          "x0": 143.38572692871094,
+          "y0": 352.0977783203125,
+          "x1": 152.4609832763672,
+          "y1": 355.69732666015625,
+          "text": "Spleen",
+          "block_no": 9
+        },
+        {
+          "x0": 177.88360595703125,
+          "y0": 357.943115234375,
+          "x1": 205.15093994140625,
+          "y1": 365.0884704589844,
+          "text": "Abd-MRI",
+          "block_no": 10
+        },
+        {
+          "x0": 255.14590454101562,
+          "y0": 263.3817138671875,
+          "x1": 358.4430847167969,
+          "y1": 267.9581604003906,
+          "text": "Support\nGround Truth\nMAUP\nRPT\nFAMNet",
+          "block_no": 11
+        },
+        {
+          "x0": 258.57952880859375,
+          "y0": 284.57415771484375,
+          "x1": 265.66156005859375,
+          "y1": 288.1737060546875,
+          "text": "Liver",
+          "block_no": 12
+        },
+        {
+          "x0": 253.24105834960938,
+          "y0": 306.684326171875,
+          "x1": 270.9200744628906,
+          "y1": 310.28387451171875,
+          "text": "Right Kidney",
+          "block_no": 13
+        },
+        {
+          "x0": 254.49478149414062,
+          "y0": 329.4941711425781,
+          "x1": 270.0927734375,
+          "y1": 333.0937194824219,
+          "text": "Left Kidney",
+          "block_no": 14
+        },
+        {
+          "x0": 257.2125549316406,
+          "y0": 352.4010925292969,
+          "x1": 266.28778076171875,
+          "y1": 356.0006408691406,
+          "text": "Spleen",
+          "block_no": 15
+        },
+        {
+          "x0": 296.30072021484375,
+          "y0": 358.185791015625,
+          "x1": 319.24212646484375,
+          "y1": 365.3311462402344,
+          "text": "Abd-CT",
+          "block_no": 16
+        },
+        {
+          "x0": 370.26287841796875,
+          "y0": 262.37066650390625,
+          "x1": 471.1092834472656,
+          "y1": 267.5375671386719,
+          "text": "Support\nGround Truth\nMAUP\nRPT\nFAMNet",
+          "block_no": 17
+        },
+        {
+          "x0": 406.483642578125,
+          "y0": 333.50341796875,
+          "x1": 436.27459716796875,
+          "y1": 340.6487731933594,
+          "text": "Card-MRI",
+          "block_no": 18
+        },
+        {
+          "x0": 372.8997802734375,
+          "y0": 284.3112487792969,
+          "x1": 382.2147521972656,
+          "y1": 287.9107971191406,
+          "text": "LV-BP",
+          "block_no": 19
+        },
+        {
+          "x0": 375.1645812988281,
+          "y0": 328.7460021972656,
+          "x1": 379.5173034667969,
+          "y1": 332.3455505371094,
+          "text": "RV",
+          "block_no": 20
+        },
+        {
+          "x0": 370.57025146484375,
+          "y0": 306.17071533203125,
+          "x1": 382.95916748046875,
+          "y1": 309.770263671875,
+          "text": "LV-MYO",
+          "block_no": 21
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 371.66925048828125,
+          "x1": 480.60687255859375,
+          "y1": 391.5946350097656,
+          "text": "Fig. 3. The qualitative results of our model and compared models in datasets: Abd-\nMRI, Abd-CT and Card-MRI.",
+          "block_no": 22
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 410.3297424316406,
+          "x1": 480.6165466308594,
+          "y1": 515.9357299804688,
+          "text": "Implementation Details. We employ the pretrained DINOv2-ViT-L/14 [14]\nas the feature extractor E(·) for the high-quality visual representation. For seg-\nmentation component, we utilize the SAM-ViT-H as encoder of the SAM model,\nwhich leads to the excellent segmentation performance in our task. For a compar-\nison, the metric used to evaluate the performance of 2D slices on 3D volumetric\nground-truth is the Dice score [5]. Our model is implemented with the PyTorch\nv1.12 framework, and all of experiments are conducted on a workstation with\nan NVIDIA 3090 GPU with 24GB memory. To simulate the scarcity of labeled\ndata in medical scenarios, all experiments embrace the 1-way 1-shot setting.",
+          "block_no": 23
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 537.7186279296875,
+          "x1": 345.8724365234375,
+          "y1": 547.6812133789062,
+          "text": "3.2\nQuantitative and Qualitative Results",
+          "block_no": 24
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 559.5071411132812,
+          "x1": 480.6265563964844,
+          "y1": 665.1107177734375,
+          "text": "Table 1 and Table 2 presents a comprehensive performance comparison between\nour proposed model and several Few-shot Medical Image Segmentation (FSMIS)\nmodels, including PANet [21], SSL-ALP [15], RPT [29], IFA [13] and FAMNet\n[3]. The average dice scores of target organs or regions are compared in this table.\nFor a fair comparison, it is important to note that PANet, SSL-ALP, RPT, IFA\nand FAMNet all employ medical image datasets as source domain and fine-tune\nthe models on them, while ours directly inferences on three target medical image\ndatasets (Abd-MRI, Abd-CT and Card-MRI) in a training-free manner, which\nis much harder than these methods. From the two tables, it can be seen that the",
+          "block_no": 25
+        }
+      ]
+    },
+    {
+      "page": 8,
+      "text": "8      Y. Zhu et al.\n\nTable  3.  Ablation  study  with                  70                              Abdominal MRI\ndifferent prompting strategies on                  69\n                                                                                  68                                                 67.09\nAbd-MRI.                          %  67                                                                                  66                       65.74    65.73    66.24             66.23    65.09                                                                                                                                                                                         Score  65              64.51                                                         64.29    64.26\n                                                                                                               DSC  64     63.25\n UMP MMP NP Dice Score (%)                     6362\n  ✓                 65.08                              6160\n  ✓  ✓           66.71                                    5     10    15    20Number25of Similarity30   Maps35    40    50    60\n  ✓  ✓  ✓     67.09        Fig. 4. Ablation study the of number of similarity\n                            maps Nf.\n\n\nproposed method outperforms all listed methods in terms of the mean Dice val-\nues obtained on three datasets. Specifically, our model outperforms second-best\nmodels by 1.3%, 2.71% and 1.55% on Abd-MRI, Abd-CT and Card-MRI. In\naddition to the quantitative comparisons, Fig. 3 shows qualitative results of our\nmodel compared to the alternative model on Abd-MRI, Abd-CT and Card-MRI\ndatasets. The visual evidence clearly demonstrates boundary preservation capa-\nbilities and enhanced generalization performance of our model across different\nanatomical structures and imaging modalities.\n\n\n3.3  Ablation Studies\n\nThe ablation studies are conducted on the Abd-MRI dataset. As illustrated in\nFig. 4, the number of similarity maps Nf (number of divided foreground regions)\nsignificantly influences model performance, with an optimal value yielding the\nhighest Dice score. Table 3 reveals notable performance differences when com-\nparing Uncertainty Map based Prompts (UMP), Mean similarity Map based\nPrompts (MMP) and Negative Prompts (NP). Specifically, the combination of\nthree prompting strategies achieves the highest Dice score compared to partial\nprompting strategies approach.\n\n\n4  Conclusion\n\nIn this paper, we proposed MAUP, a training-free few-shot medical image seg-\nmentation approach that introduces a multi-center adaptive uncertainty-aware\nprompting strategy for the SAM model. By combining spatial diversity, un-\ncertainty guidance, and adaptive prompt optimization, MAUP effectively ad-\ndresses the challenges of medical image segmentation without requiring any ad-\nditional training on medical datasets. Our comprehensive experiments on three\ndiverse medical imaging datasets demonstrate that MAUP outperforms con-\nventional training-based few-shot segmentation models under the training-free\nmanner. The proposed method achieves precise segmentation results across dif-\nferent imaging modalities and anatomical structures, highlighting its potential\nfor real-world clinical applications.\n\nAcknowledgments. This work was supported by the National Natural Science Foun-\ndation of China under Grants 62371235.",
+      "blocks": [
+        {
+          "x0": 134.76499938964844,
+          "y0": 91.82525634765625,
+          "x1": 219.51541137695312,
+          "y1": 100.79165649414062,
+          "text": "8\nY. Zhu et al.",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 115.833251953125,
+          "x1": 273.1075439453125,
+          "y1": 147.78775024414062,
+          "text": "Table\n3. Ablation study with\ndifferent prompting strategies on\nAbd-MRI.",
+          "block_no": 1
+        },
+        {
+          "x0": 140.41799926757812,
+          "y0": 162.65521240234375,
+          "x1": 267.44354248046875,
+          "y1": 172.68385314941406,
+          "text": "UMP MMP NP Dice Score (%)",
+          "block_no": 2
+        },
+        {
+          "x0": 147.49200439453125,
+          "y0": 177.71762084960938,
+          "x1": 249.3923797607422,
+          "y1": 210.56973266601562,
+          "text": "✓\n65.08\n✓\n✓\n66.71\n✓\n✓\n✓\n67.09",
+          "block_no": 3
+        },
+        {
+          "x0": 325.3253479003906,
+          "y0": 159.57489013671875,
+          "x1": 333.1927795410156,
+          "y1": 163.4456787109375,
+          "text": "63.25",
+          "block_no": 4
+        },
+        {
+          "x0": 339.25946044921875,
+          "y0": 152.07460021972656,
+          "x1": 347.12689208984375,
+          "y1": 155.9453887939453,
+          "text": "64.51",
+          "block_no": 5
+        },
+        {
+          "x0": 353.1913757324219,
+          "y0": 144.7469482421875,
+          "x1": 374.9951171875,
+          "y1": 148.6767578125,
+          "text": "65.74\n65.73",
+          "block_no": 6
+        },
+        {
+          "x0": 381.0574035644531,
+          "y0": 141.76824951171875,
+          "x1": 388.92486572265625,
+          "y1": 145.6390380859375,
+          "text": "66.24",
+          "block_no": 7
+        },
+        {
+          "x0": 394.99371337890625,
+          "y0": 136.70687866210938,
+          "x1": 402.86114501953125,
+          "y1": 140.57766723632812,
+          "text": "67.09",
+          "block_no": 8
+        },
+        {
+          "x0": 408.92999267578125,
+          "y0": 141.83163452148438,
+          "x1": 416.7974548339844,
+          "y1": 145.70242309570312,
+          "text": "66.23",
+          "block_no": 9
+        },
+        {
+          "x0": 422.8597412109375,
+          "y0": 148.6173095703125,
+          "x1": 430.7272033691406,
+          "y1": 152.48809814453125,
+          "text": "65.09",
+          "block_no": 10
+        },
+        {
+          "x0": 436.7960510253906,
+          "y0": 153.3773193359375,
+          "x1": 458.5755920410156,
+          "y1": 157.4668731689453,
+          "text": "64.29\n64.26",
+          "block_no": 11
+        },
+        {
+          "x0": 313.22479248046875,
+          "y0": 122.3539047241211,
+          "x1": 317.5938415527344,
+          "y1": 186.75857543945312,
+          "text": "60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70",
+          "block_no": 12
+        },
+        {
+          "x0": 327.18731689453125,
+          "y0": 187.04391479492188,
+          "x1": 455.8636474609375,
+          "y1": 191.89207458496094,
+          "text": "5\n10\n15\n20\n25\n30\n35\n40\n50\n60",
+          "block_no": 13
+        },
+        {
+          "x0": 304.4920959472656,
+          "y0": 141.00601196289062,
+          "x1": 309.0789489746094,
+          "y1": 165.3616180419922,
+          "text": "DSC Score %",
+          "block_no": 14
+        },
+        {
+          "x0": 368.5438232421875,
+          "y0": 191.48704528808594,
+          "x1": 418.48663330078125,
+          "y1": 196.07972717285156,
+          "text": "Number of Similarity Maps",
+          "block_no": 15
+        },
+        {
+          "x0": 380.7012023925781,
+          "y0": 116.80683898925781,
+          "x1": 408.5676574707031,
+          "y1": 121.16146850585938,
+          "text": "Abdominal MRI",
+          "block_no": 16
+        },
+        {
+          "x0": 284.35400390625,
+          "y0": 199.333251953125,
+          "x1": 481.482177734375,
+          "y1": 220.7309112548828,
+          "text": "Fig. 4. Ablation study the of number of similarity\nmaps Nf.",
+          "block_no": 17
+        },
+        {
+          "x0": 134.7649688720703,
+          "y0": 238.93626403808594,
+          "x1": 480.6064453125,
+          "y1": 332.5848388671875,
+          "text": "proposed method outperforms all listed methods in terms of the mean Dice val-\nues obtained on three datasets. Specifically, our model outperforms second-best\nmodels by 1.3%, 2.71% and 1.55% on Abd-MRI, Abd-CT and Card-MRI. In\naddition to the quantitative comparisons, Fig. 3 shows qualitative results of our\nmodel compared to the alternative model on Abd-MRI, Abd-CT and Card-MRI\ndatasets. The visual evidence clearly demonstrates boundary preservation capa-\nbilities and enhanced generalization performance of our model across different\nanatomical structures and imaging modalities.",
+          "block_no": 18
+        },
+        {
+          "x0": 134.7649688720703,
+          "y0": 350.4697570800781,
+          "x1": 244.67239379882812,
+          "y1": 360.432373046875,
+          "text": "3.3\nAblation Studies",
+          "block_no": 19
+        },
+        {
+          "x0": 134.7649688720703,
+          "y0": 368.3602294921875,
+          "x1": 480.5789794921875,
+          "y1": 462.0087585449219,
+          "text": "The ablation studies are conducted on the Abd-MRI dataset. As illustrated in\nFig. 4, the number of similarity maps Nf (number of divided foreground regions)\nsignificantly influences model performance, with an optimal value yielding the\nhighest Dice score. Table 3 reveals notable performance differences when com-\nparing Uncertainty Map based Prompts (UMP), Mean similarity Map based\nPrompts (MMP) and Negative Prompts (NP). Specifically, the combination of\nthree prompting strategies achieves the highest Dice score compared to partial\nprompting strategies approach.",
+          "block_no": 20
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 480.33135986328125,
+          "x1": 219.24046325683594,
+          "y1": 492.28656005859375,
+          "text": "4\nConclusion",
+          "block_no": 21
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 503.7611389160156,
+          "x1": 480.59649658203125,
+          "y1": 633.2757568359375,
+          "text": "In this paper, we proposed MAUP, a training-free few-shot medical image seg-\nmentation approach that introduces a multi-center adaptive uncertainty-aware\nprompting strategy for the SAM model. By combining spatial diversity, un-\ncertainty guidance, and adaptive prompt optimization, MAUP effectively ad-\ndresses the challenges of medical image segmentation without requiring any ad-\nditional training on medical datasets. Our comprehensive experiments on three\ndiverse medical imaging datasets demonstrate that MAUP outperforms con-\nventional training-based few-shot segmentation models under the training-free\nmanner. The proposed method achieves precise segmentation results across dif-\nferent imaging modalities and anatomical structures, highlighting its potential\nfor real-world clinical applications.",
+          "block_no": 22
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 643.8931274414062,
+          "x1": 480.6352233886719,
+          "y1": 663.8185424804688,
+          "text": "Acknowledgments. This work was supported by the National Natural Science Foun-\ndation of China under Grants 62371235.",
+          "block_no": 23
+        }
+      ]
+    },
+    {
+      "page": 9,
+      "text": "Title Suppressed Due to Excessive Length      9\n\n\nDisclosure of Interests. All authors declare that they have no conflicts of interest\n\n\nReferences\n\n 1. Aurenhammer, F.: Voronoi diagrams: a survey of a fundamental geometric data\n    structure. ACM Computing Surveys (CSUR) 23(3), 345–405 (1991)\n 2. Azad, R., Aghdam, E.K., Rauland, A., Jia, Y., Avval, A.H., Bozorgpour, A., Karim-\n     ijafarbigloo, S., Cohen, J.P., Adeli, E., Merhof, D.: Medical image segmentation\n    review: The success of u-net. IEEE Transactions on Pattern Analysis and Machine\n    Intelligence 46(12), 10076–10095 (2024)\n 3. Bo, Y., Zhu, Y., Li, L., Zhang, H.: Famnet: Frequency-aware matching network\n     for cross-domain few-shot medical image segmentation. In: AAAI Conference on\n     Artificial Intelligence (2025)\n 4. Chen, H., Dong, Y., Lu, Z., Yu, Y., Han, J.: Pixel matching network for cross-\n   domain few-shot segmentation. In: Proceedings of the IEEE/CVF Winter Confer-\n    ence on Applications of Computer Vision. pp. 978–987 (2024)\n 5. Cheng, Z., Wang, S., Xin, T., Zhou, T., Zhang, H., Shao, L.: Few-shot medi-\n    cal image segmentation via generating multiple representative descriptors. IEEE\n    Transactions on Medical Imaging 43(6), 2202–2214 (2024)\n 6. Cheng, Z., Zhu, Y., Wang, S., Xin, T., Zhang, H.: Cascaded alternating refine-\n   ment transformer for few-shot medical image segmentation. ACM Transactions on\n     Intelligent Systems and Technology (2025)\n 7. Huang, K., Zhou, T., Fu, H., Zhang, Y., Zhou, Y., Gong, C., Liang, D.: Learnable\n    prompting sam-induced knowledge distillation for semi-supervised medical image\n    segmentation. IEEE Transactions on Medical Imaging pp. 1–1 (2025)\n 8. Jiang, Y., Shen, Y.: M4oe: A foundation model for medical multimodal image\n    segmentation with mixture of experts. In: Linguraru, M.G., Dou, Q., Feragen,\n    A., Giannarou, S., Glocker, B., Lekadir, K., Schnabel, J.A. (eds.) International\n    Conference on Medical Image Computing and Computer Assisted Intervention.\n    pp. 621–631 (2024)\n 9. Kavur, A.E., Gezer, N.S., Barış, M., Aslan, S., Conze, P.H., Groza, V., Pham,\n    D.D., Chatterjee, S., Ernst, P., Özkan, S., et al.: Chaos challenge-combined (ct-\n   mr) healthy abdominal organ segmentation. Medical Image Analysis 69, 101950\n    (2021)\n10. Kirillov, A., Mintun, E., Ravi, N., Mao, H., Rolland, C., Gustafson, L., Xiao, T.,\n    Whitehead, S., Berg, A.C., Lo, W.Y., et al.: Segment anything. In: Proceedings of\n    the IEEE/CVF international conference on computer vision. pp. 4015–4026 (2023)\n11. Landman, B., Xu, Z., Igelsias, J., Styner, M., Langerak, T., Klein, A.: Miccai multi-\n    atlas labeling beyond the cranial vault–workshop and challenge. In: Proceedings of\n    the MICCAI—Workshop Challenge. vol. 5, p. 12 (2015)\n12. Lei, S., Zhang, X., He, J., Chen, F., Du, B., Lu, C.T.: Cross-domain few-shot\n    semantic segmentation. In: European Conference on Computer Vision. pp. 73–90\n    (2022)\n13. Nie, J., Xing, Y., Zhang, G., Yan, P., Xiao, A., Tan, Y.P., Kot, A.C., Lu, S.:\n    Cross-domain few-shot segmentation via iterative support-query correspondence\n    mining. IEEE/CVF Conference on Computer Vision and Pattern Recognition pp.\n    3380–3390 (2024)\n14. Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V.,\n    Fernandez, P., Haziza, D., Massa, F., El-Nouby, A., et al.: Dinov2: Learning robust\n    visual features without supervision. arXiv preprint arXiv:2304.07193 (2023)",
+      "blocks": [
+        {
+          "x0": 277.4880065917969,
+          "y0": 91.82525634765625,
+          "x1": 480.5948791503906,
+          "y1": 100.79165649414062,
+          "text": "Title Suppressed Due to Excessive Length\n9",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 117.728271484375,
+          "x1": 476.6628112792969,
+          "y1": 127.76577758789062,
+          "text": "Disclosure of Interests. All authors declare that they have no conflicts of interest",
+          "block_no": 1
+        },
+        {
+          "x0": 134.76498413085938,
+          "y0": 146.3795166015625,
+          "x1": 197.6851806640625,
+          "y1": 158.334716796875,
+          "text": "References",
+          "block_no": 2
+        },
+        {
+          "x0": 134.76397705078125,
+          "y0": 168.0963134765625,
+          "x1": 480.6476745605469,
+          "y1": 663.8186645507812,
+          "text": "1. Aurenhammer, F.: Voronoi diagrams: a survey of a fundamental geometric data\nstructure. ACM Computing Surveys (CSUR) 23(3), 345–405 (1991)\n2. Azad, R., Aghdam, E.K., Rauland, A., Jia, Y., Avval, A.H., Bozorgpour, A., Karim-\nijafarbigloo, S., Cohen, J.P., Adeli, E., Merhof, D.: Medical image segmentation\nreview: The success of u-net. IEEE Transactions on Pattern Analysis and Machine\nIntelligence 46(12), 10076–10095 (2024)\n3. Bo, Y., Zhu, Y., Li, L., Zhang, H.: Famnet: Frequency-aware matching network\nfor cross-domain few-shot medical image segmentation. In: AAAI Conference on\nArtificial Intelligence (2025)\n4. Chen, H., Dong, Y., Lu, Z., Yu, Y., Han, J.: Pixel matching network for cross-\ndomain few-shot segmentation. In: Proceedings of the IEEE/CVF Winter Confer-\nence on Applications of Computer Vision. pp. 978–987 (2024)\n5. Cheng, Z., Wang, S., Xin, T., Zhou, T., Zhang, H., Shao, L.: Few-shot medi-\ncal image segmentation via generating multiple representative descriptors. IEEE\nTransactions on Medical Imaging 43(6), 2202–2214 (2024)\n6. Cheng, Z., Zhu, Y., Wang, S., Xin, T., Zhang, H.: Cascaded alternating refine-\nment transformer for few-shot medical image segmentation. ACM Transactions on\nIntelligent Systems and Technology (2025)\n7. Huang, K., Zhou, T., Fu, H., Zhang, Y., Zhou, Y., Gong, C., Liang, D.: Learnable\nprompting sam-induced knowledge distillation for semi-supervised medical image\nsegmentation. IEEE Transactions on Medical Imaging pp. 1–1 (2025)\n8. Jiang, Y., Shen, Y.: M4oe: A foundation model for medical multimodal image\nsegmentation with mixture of experts. In: Linguraru, M.G., Dou, Q., Feragen,\nA., Giannarou, S., Glocker, B., Lekadir, K., Schnabel, J.A. (eds.) International\nConference on Medical Image Computing and Computer Assisted Intervention.\npp. 621–631 (2024)\n9. Kavur, A.E., Gezer, N.S., Barış, M., Aslan, S., Conze, P.H., Groza, V., Pham,\nD.D., Chatterjee, S., Ernst, P., Özkan, S., et al.: Chaos challenge-combined (ct-\nmr) healthy abdominal organ segmentation. Medical Image Analysis 69, 101950\n(2021)\n10. Kirillov, A., Mintun, E., Ravi, N., Mao, H., Rolland, C., Gustafson, L., Xiao, T.,\nWhitehead, S., Berg, A.C., Lo, W.Y., et al.: Segment anything. In: Proceedings of\nthe IEEE/CVF international conference on computer vision. pp. 4015–4026 (2023)\n11. Landman, B., Xu, Z., Igelsias, J., Styner, M., Langerak, T., Klein, A.: Miccai multi-\natlas labeling beyond the cranial vault–workshop and challenge. In: Proceedings of\nthe MICCAI—Workshop Challenge. vol. 5, p. 12 (2015)\n12. Lei, S., Zhang, X., He, J., Chen, F., Du, B., Lu, C.T.: Cross-domain few-shot\nsemantic segmentation. In: European Conference on Computer Vision. pp. 73–90\n(2022)\n13. Nie, J., Xing, Y., Zhang, G., Yan, P., Xiao, A., Tan, Y.P., Kot, A.C., Lu, S.:\nCross-domain few-shot segmentation via iterative support-query correspondence\nmining. IEEE/CVF Conference on Computer Vision and Pattern Recognition pp.\n3380–3390 (2024)\n14. Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V.,\nFernandez, P., Haziza, D., Massa, F., El-Nouby, A., et al.: Dinov2: Learning robust\nvisual features without supervision. arXiv preprint arXiv:2304.07193 (2023)",
+          "block_no": 3
+        }
+      ]
+    },
+    {
+      "page": 10,
+      "text": "10     Y. Zhu et al.\n\n\n15. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervision\n    with superpixels: Training few-shot medical image segmentation without annota-\n     tion. In: European Conference on Computer Vision. pp. 762–780 (2020)\n16. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervised\n    learning for few-shot medical image segmentation. IEEE Transactions on Medical\n    Imaging 41(7), 1837–1848 (2022)\n17. Shaker, A., Maaz, M., Rasheed, H., Khan, S., Yang, M.H., Shahbaz Khan, F.:\n   Unetr++: Delving into efficient and accurate 3d medical image segmentation. IEEE\n    Transactions on Medical Imaging 43(9), 3377–3390 (2024)\n18. Song, F., Cheng, Z., Li, L., Zhang, H.: Mtpnet: Learning multiple twin-support\n    prototypes for few-shot medical image segmentation. In: International Conference\n   on Bioinformatics and Biomedicine. pp. 2414–2421 (2024)\n19. Tang, K., Wang, S., Chen, Y.: Cross modulation and region contrast learning\n    network for few-shot medical image segmentation. IEEE Signal Processing Letters\n    31, 1670–1674 (2024)\n20. Tang, S., Yan, S., Qi, X., Gao, J., Ye, M., Zhang, J., Zhu, X.: Few-shot medical\n    image segmentation with high-fidelity prototypes. Medical Image Analysis 100,\n    103412 (2025)\n21. Wang, K., Liew, J.H., Zou, Y., Zhou, D., Feng, J.: Panet: Few-shot image semantic\n    segmentation with prototype alignment. In: proceedings of the IEEE/CVF inter-\n    national conference on computer vision. pp. 9197–9206 (2019)\n22. Wang, R., Yang, Z., Song, Y.: Osam-fundus: A training-free, one-shot segmentation\n    framework for optic disc and cup in fundus images. Biomedical Signal Processing\n   and Control 100, 107069 (2025)\n23. Yang, Y., Fang, X., Li, X., Han, Y., Yu, Z.: Cdsg-sam: A cross-domain  self-\n    generating prompt few-shot brain tumor segmentation pipeline based on sam.\n    Biomedical Signal Processing and Control 100, 106936 (2025)\n24. You, C., Dai, W., Liu, F., Min, Y., Dvornek, N.C., Li, X., Clifton, D.A., Staib,\n     L., Duncan, J.S.: Mine your own anatomy: Revisiting medical image segmentation\n    with extremely limited labels. IEEE Transactions on Pattern Analysis and Machine\n    Intelligence 46(12), 11136–11151 (2024)\n25. Zhang, S., Metaxas, D.: On the challenges and perspectives of foundation models\n     for medical image analysis. Medical Image Analysis 91, 102996 (2024)\n26. Zhang, Y., Li, H., Gao, Y., Duan, H., Huang, Y., Zheng, Y.: Prototype correlation\n    matching and class- relation reasoning for few-shot medical image segmentation.\n   IEEE Transactions on Medical Imaging 43(11), 4041–4054 (2024)\n27. Zhu, W., Chen, X., Qiu, P., Farazi, M., Sotiras, A., Razi, A., Wang, Y.: Selfreg-unet:\n    Self-regularized unet for medical image segmentation. In: International Conference\n   on Medical Image Computing and Computer-Assisted Intervention. pp. 601–611\n    (2024)\n28. Zhu, Y., Li, M., Ye, Q., Wang, S., Xin, T., Zhang, H.: Robustemd: Domain robust\n    matching for cross-domain few-shot medical image segmentation (2025), https:\n    //arxiv.org/abs/2410.01110\n29. Zhu, Y., Wang, S., Xin, T., Zhang, H.: Few-shot medical image segmentation via\n    a region-enhanced prototypical transformer. In: International Conference on Med-\n     ical Image Computing and Computer-Assisted Intervention. pp. 271–280. Springer\n    (2023)\n30. Zhu, Y., Wang, S., Xin, T., Zhang, Z., Zhang, H.: Partition-a-medical-image: Ex-\n    tracting multiple representative subregions for few-shot medical image segmenta-\n     tion. IEEE Transactions on Instrumentation and Measurement 73, 1–12 (2024)",
+      "blocks": [
+        {
+          "x0": 134.76499938964844,
+          "y0": 91.82525634765625,
+          "x1": 219.52439880371094,
+          "y1": 100.79165649414062,
+          "text": "10\nY. Zhu et al.",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76495361328125,
+          "y0": 117.728271484375,
+          "x1": 480.64776611328125,
+          "y1": 664.8895874023438,
+          "text": "15. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervision\nwith superpixels: Training few-shot medical image segmentation without annota-\ntion. In: European Conference on Computer Vision. pp. 762–780 (2020)\n16. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervised\nlearning for few-shot medical image segmentation. IEEE Transactions on Medical\nImaging 41(7), 1837–1848 (2022)\n17. Shaker, A., Maaz, M., Rasheed, H., Khan, S., Yang, M.H., Shahbaz Khan, F.:\nUnetr++: Delving into efficient and accurate 3d medical image segmentation. IEEE\nTransactions on Medical Imaging 43(9), 3377–3390 (2024)\n18. Song, F., Cheng, Z., Li, L., Zhang, H.: Mtpnet: Learning multiple twin-support\nprototypes for few-shot medical image segmentation. In: International Conference\non Bioinformatics and Biomedicine. pp. 2414–2421 (2024)\n19. Tang, K., Wang, S., Chen, Y.: Cross modulation and region contrast learning\nnetwork for few-shot medical image segmentation. IEEE Signal Processing Letters\n31, 1670–1674 (2024)\n20. Tang, S., Yan, S., Qi, X., Gao, J., Ye, M., Zhang, J., Zhu, X.: Few-shot medical\nimage segmentation with high-fidelity prototypes. Medical Image Analysis 100,\n103412 (2025)\n21. Wang, K., Liew, J.H., Zou, Y., Zhou, D., Feng, J.: Panet: Few-shot image semantic\nsegmentation with prototype alignment. In: proceedings of the IEEE/CVF inter-\nnational conference on computer vision. pp. 9197–9206 (2019)\n22. Wang, R., Yang, Z., Song, Y.: Osam-fundus: A training-free, one-shot segmentation\nframework for optic disc and cup in fundus images. Biomedical Signal Processing\nand Control 100, 107069 (2025)\n23. Yang, Y., Fang, X., Li, X., Han, Y., Yu, Z.: Cdsg-sam: A cross-domain self-\ngenerating prompt few-shot brain tumor segmentation pipeline based on sam.\nBiomedical Signal Processing and Control 100, 106936 (2025)\n24. You, C., Dai, W., Liu, F., Min, Y., Dvornek, N.C., Li, X., Clifton, D.A., Staib,\nL., Duncan, J.S.: Mine your own anatomy: Revisiting medical image segmentation\nwith extremely limited labels. IEEE Transactions on Pattern Analysis and Machine\nIntelligence 46(12), 11136–11151 (2024)\n25. Zhang, S., Metaxas, D.: On the challenges and perspectives of foundation models\nfor medical image analysis. Medical Image Analysis 91, 102996 (2024)\n26. Zhang, Y., Li, H., Gao, Y., Duan, H., Huang, Y., Zheng, Y.: Prototype correlation\nmatching and class- relation reasoning for few-shot medical image segmentation.\nIEEE Transactions on Medical Imaging 43(11), 4041–4054 (2024)\n27. Zhu, W., Chen, X., Qiu, P., Farazi, M., Sotiras, A., Razi, A., Wang, Y.: Selfreg-unet:\nSelf-regularized unet for medical image segmentation. In: International Conference\non Medical Image Computing and Computer-Assisted Intervention. pp. 601–611\n(2024)\n28. Zhu, Y., Li, M., Ye, Q., Wang, S., Xin, T., Zhang, H.: Robustemd: Domain robust\nmatching for cross-domain few-shot medical image segmentation (2025), https:\n//arxiv.org/abs/2410.01110\n29. Zhu, Y., Wang, S., Xin, T., Zhang, H.: Few-shot medical image segmentation via\na region-enhanced prototypical transformer. In: International Conference on Med-\nical Image Computing and Computer-Assisted Intervention. pp. 271–280. Springer\n(2023)\n30. Zhu, Y., Wang, S., Xin, T., Zhang, Z., Zhang, H.: Partition-a-medical-image: Ex-\ntracting multiple representative subregions for few-shot medical image segmenta-\ntion. IEEE Transactions on Instrumentation and Measurement 73, 1–12 (2024)",
+          "block_no": 1
+        }
+      ]
+    },
+    {
+      "page": 11,
+      "text": "Title Suppressed Due to Excessive Length     11\n\n\n31. Zhuang, X.: Multivariate mixture model for myocardial segmentation combining\n    multi-source images. IEEE transactions on pattern analysis and machine intelli-\n    gence 41(12), 2933–2946 (2018)",
+      "blocks": [
+        {
+          "x0": 277.4880065917969,
+          "y0": 91.82525634765625,
+          "x1": 480.59490966796875,
+          "y1": 100.79165649414062,
+          "text": "Title Suppressed Due to Excessive Length\n11",
+          "block_no": 0
+        },
+        {
+          "x0": 134.76499938964844,
+          "y0": 117.728271484375,
+          "x1": 480.6027526855469,
+          "y1": 149.68374633789062,
+          "text": "31. Zhuang, X.: Multivariate mixture model for myocardial segmentation combining\nmulti-source images. IEEE transactions on pattern analysis and machine intelli-\ngence 41(12), 2933–2946 (2018)",
+          "block_no": 1
+        }
+      ]
+    }
+  ],
+  "full_text": "MAUP: Training-free Multi-center Adaptive\n                  Uncertainty-aware Prompting for Cross-domain\n                     Few-shot Medical Image Segmentation\n\n\n                                        Yazhou Zhu1 and Haofeng Zhang1 (B)\n\n                               School of Computer Science and Engineering, Nanjing University of Science and\n                                    Technology, Nanjing 210094, China. {zyz_nj,zhanghf}@njust.edu.cn\n2025                          Abstract. Cross-domain Few-shot Medical Image Segmentation (CD-\n                             FSMIS) is a potential solution for segmenting medical images with lim-\n                                        ited annotation using knowledge from other domains. The significant\n                                  performance of current CD-FSMIS models relies on the heavily train-Aug                                     ing procedure over other source medical domains, which degrades the\n5                                universality and ease of model deployment. With the development of\n                                       large visual models of natural images, we propose a training-free CD-\n                           FSMIS model that introduces the Multi-center Adaptive Uncertainty-\n                                 aware Prompting (MAUP) strategy for adapting the foundation model\n                               Segment Anything Model (SAM), which is trained with natural images,\n                                       into the CD-FSMIS task. To be specific, MAUP consists of three key in-\n                                      novations: (1) K-means clustering based multi-center prompts generation[cs.CV]                                         for comprehensive spatial coverage, (2) uncertainty-aware prompts selec-\n                                      tion that focuses on the challenging regions, and (3) adaptive prompt\n                                    optimization that can dynamically adjust according to the target re-\n                                    gion complexity. With the pre-trained DINOv2 feature encoder, MAUP\n                                     achieves precise segmentation results across three medical datasets with-\n                                  out any additional training compared with several conventional CD-\n                           FSMIS models and training-free FSMIS model. The source code is avail-\n                                     able at: https://github.com/YazhouZhu19/MAUP.\n\n                            Keywords: Medical Image Segmentation  · Cross-domain  · Few-shot\n                                  Learning · Adaptive Prompting\n\n\n                  1  Introduction\n\n                         Medical Image Segmentation (MIS) has become a foundational technique inarXiv:2508.03511v1                  modern healthcare, disease diagnosis and treatment planning [2,27]. Traditional\n                         deep learning based MIS models fundamentally relay on the extensive annotated\n                          data which is both costly and time-consuming to acquire in medical imaging,\n                              especially in rare disease scans [25,17]. Besides, this problem is also compounded\n                        by the heterogeneity of medical scans, encompassing diverse modalities (e.g.,\n                      MRI, CT and X-Ray) and anatomical structures, which leads to the hard of\n                               intra-class generalization in semantic segmentation [8,24].\n                               Accordingly, Few-shot Medical Image Segmentation (FSMIS) is proposed to\n                           address these limitations, enhancing the model capability of segmenting with\n\n2      Y. Zhu et al.\n\n\nlimited annotated images [30,20,26]. However, FSMIS still requires a large num-\nber of labeled samples in the same domain for model training [6,18], even if the\ntarget class for testing differs, e.g., both training and testing must be performed\non CT images. To solve this problem, some researchers have tried to implement\nmodel training using labeled samples from other medical domains and transfer\nthem to the target medical domain [28,23], e.g., training on CT and applying\nthe model to MR images, which is called Cross-domain FSMIS (CD-FSMIS).\nDespite the effectiveness of these CD-FSMIS methods [3,4,19], there are still\ntwo problems: (1) They require a large amount of precisely annotated images in\nthe medical domains, which are also usually scarce and need to be annotated\nby professional doctors; (2) A lot of model training for each application is still\nnecessary.\n\n   Recently, the Segment Anything Model (SAM) [10,7] has created the possi-\nbilities for training-free segmentation model with appropriate prompting strat-\negy [22], yet its direct application to CD-FSMIS still faces several critical chal-\nlenges: (1) Prompts (e.g., point prompts) need to capture the complete structure\nof complex medical objects; (2) Lack of boundary awareness leads to the seg-\nmentation ambiguity, especially in some low-contrast medical images, and (3)\nTraditional fixed prompting strategy always fails to adapt to varying anatomical\ncomplexities. In order to address these limitations, we introduce a novel training-\nfree few-shot medical image segmentation model with Multi-center Adaptive\nUncertainty-aware Prompting (MAUP) strategy for the SAM model. To be spe-\ncific, the MAUP strategy employs the point prompts and it consists of four com-\nponents: (1) A multi-center prompting strategy that employs K-means clustering\non high-similarity regions to make sure the spatial diversity in point prompts,\nleading to the comprehensive coverage of complex anatomical structures; (2)\nLeveraging the morphology based periphery similarity maps to generate nega-\ntive prompts, enhancing boundary delineation accuracy in low-contrast regions;\n(3) An uncertainty-aware prompt selection approach which identifies and focuses\non challenging regions with analyzing variance value across similarity maps; and\n(4) An adaptive point prompts quantity determination method that dynamically\nadjusts the number of point prompts based on target complexity.\n\n   Besides, MAUP employs the DINOv2 [14] as the feature encoder in few-shot\nsegmentation algorithm, enabling the both of discriminative and generalizable\ncapability of core features without requirement of model training. And the syn-\nergy of proposed four components make MAUP effectively handle diverse med-\nical imaging scenarios while maintaining the high segmentation accuracy. Our\nmethod achieves the precise segmentation results in three medical image datasets\nincluding the abdominal datasets Abd-MRI [9] and Abd-CT [11], and the car-\ndiac dataset Card-MRI [31]. In conclusion, the key contributions of our model\ncan be summarized as follows:\n\n    (1) We introduce a training-free model which addresses the limitations of\nexisting cross-domain few-shot medical image segmentation approaches via de-\nsigned innovative prompting strategy.\n\nTitle Suppressed Due to Excessive Length      3\n\n\n                           Support                                 Positive Prompting                        M : Merge\n                        Mask                                    Uncertainty Map                                                                                  : Frozen Weights\n                                                                                                                                 Positive Prompts          COS                                                                                                                                                                                                                        :                                                                                                                                              Cosine                                                                                                                                                                         Similarity                                                                                                                                             Selection      ....         SelectionRandomly2 Points\n Is                   Fs     RPG     COS                                                                                                     MAP                                                                                                                                                                                                                          :                                                                                                                           Masked                                                                                                                                               Average Pooling                                                                                  M                                                                                    Complexit                                                                                                ....\n\n                           Periphery Support Image          Encoder                                                             y                                                RPG  : Regional Prototype Generation                       Mask                         Similarity Maps                        Selection  .......         K-means    ...                Query Image\n                      Fs     MAP                   Mean Similarity Map\n                                                                      Negative                                                                      Prompts\n                                                       SAM                                      DINOv2\n                                    COS                                        Selection                                                                                                                             .                                                                                                                                                                                       .\n                                                                                                                                .                                                                                                                                              Query Result                                                                                           M                 ........                                                                                                                                     . ...Iq                   Fq\n  Query Image                            Negative Prompting                                       Prompts\n     Fig. 1. Overview of our proposed training-free CD-FSMIS model MAUP.\n\n    (2) We propose a prompting strategy MAUP which considers the spatial\ndiversity, boundary awareness, uncertainty guidance and adaptive point prompts\nquantity adjustment for enhancing the segmentation accuracy.\n    (3) The proposed model achieves state-of-the-art performance on three med-\nical imaging datasets widely used in research.\n\n\n2  Methodology\n\n2.1  Overall Architecture\n\nThe proposed MAUP strategy introduces a training-free approach for CD-FSMIS\nvia leveraging the foundational model Segment Anything Model (SAM). Given\nthe query image Iq and a selected support image Is with corresponding support\nmask Ms, our goal is to segment the target organs in Iq without any model\ntraining. The procedure begins with extracting discriminative features Fs and Fq\nfrom both query image Iq and support image Is using the pre-trained DINOv2\nencoder. These features are then employed to calculate similarity maps that\nguide the prompting strategy MAUP, which can dynamically create the optimal\npoint prompts for SAM model. As illustrated in Fig. 1, our method consists of\nthree main steps: (1) feature extraction and similarity computation, (2) MAUP\nprompting strategy, and (3) final mask prediction.\n\n\n2.2  Feature Extraction and Similarity Map Computation\n\nWe employ the frozen DINOv2 encoder [14] which is pre-trained as feature ex-\ntractor to obtain discriminative representations from both support and query\nimages considering its robust and generalizable extraction capability. For each\nimage, the features are first extracted through: Fs = E(Is), Fq = E(Iq), where\nE(·) denotes the DINOv2 encoder.\n   As shown in Fig. 2, for subsequent multi-center positive prompting strat-\negy, we employ the Region Prototype Generation (RPG) module used in RPT\n[29] to calculate multiple regional prototypes through the subdivisions in the\nforeground of the support image. Specifically, given a support image Is and cor-\nresponding foreground mask Ms, the foreground region of this image is obtained\nwith calculating their production. Then, the Voronoi-based partition method [1]\n\n4      Y. Zhu et al.\n\n\n                          Support Mask    Regional Masks\n\n                                           Partition                                                                                                                                 ෡𝐏𝒔\n                                                                                                 Pooling\n\n\n                                                                                                 Pooling\n\n                                  Fs           .                 Pooling\n                     …   …\n                                             .  : Element-wise Multiplication            Pooling\n\n            Fig. 2. The Regional Prototype Generation (RPG) module.\n\nis employed to divide foreground into Nf regions and forms a set of regional\nmasks {Vn}Nfn=1, where Nf is set as 30 according to the experiments. After that,\na set of regional prototypes ˆPs = {ˆpn}Nfn=1 , ˆpn ∈R1×C are generated with use\nof Masked Average Pooling (MAP). Formally,\n\n\n                            HW\n                                      1\n                      ˆpn = MAP(Fs, Vn) =  X Fs,iVn,i,                 (1)\n                                      |Vn|                                                i=1\n\nwhere Fs ∈RC×H×W denotes the support feature extracted by DINOv2 encoder.\nWith these regional prototypes, we can obtain the multi-center positive similarity\nmaps set Sp = {Sn}Nfn=1 through the cosine similarity computation:\n\n                        Sn = cos(Fq, ˆpn),                             (2)\n\nwhere Sn ∈RH×W denotes the single similarity map of each region.\n   Besides, for the negative prompts, we propose to use the periphery area of\norgan to select effective negative prompts, which are able to delineate the bound-\naries of target structure and surrounding tissues. The periphery area is extracted\nthrough a morphological approach. To specific, we first apply the morphological\ndilation operation δr(·) to the support mask Ms by using a circular structuring\nelement with radius r, the dilated support mask Mdilated is calculated as:\n\n                             Mdilated = δr(Ms).                            (3)\n\n   Then, the periphery support mask ˜Ms is obtained by subtracting the original\nsupport mask Ms from the dilated mask Mdilated, written as: ˜Ms = Mdilated −\nMs, where ˜Ms ∈RH×W . Therefore, the periphery prototype is obtained by: ˜P =\nMAP(Fs, ˜Ms), where ˜P ∈R1×C and the negative similarity map is calculated\nby: ˜S = cos(Fq, ˜P).\n\n\n2.3  Multi-center Adaptive Uncertainty-aware Prompting\n\nPositive Prompting Strategy. The positive prompting strategy of MAUP\nemploys a two-path approach to identify the optimal point prompts that guide\nthe SAM model to segment target regions. As illustrated in Fig. 1, we design\na two-path of prompting strategy which consists of mean similarity map based\n\nTitle Suppressed Due to Excessive Length      5\n\n\nprompting and uncertainty map based prompting. Specifically, the mean simi-\nlarity map is calculated over similarity maps Sp = {Sn}Nfn=1, written as:\n\n                                     Nf\n                                 1\n                          υ(x, y) = X Sn(x, y),                        (4)\n                           Nf                                   n=1\nwhere υ ∈RH×W . Based on mean similarity map υ, we first perform pixel\nselection according to the highest similarity values from υ, which effectively\nidentifies regions with the highest probability of containing the target anatomical\nstructure. We employ Qmean represent this set of candidate pixels:\n\n                 Qmean = {(x, y)|υ(x, y) ≥τmean} ,                    (5)\n\nwhere τmean is the threshold value corresponding to the 95th percentile of υ. To\nensure spatial diversity among selected prompts, we apply K-means clustering\nto Qmean with k clusters. The centroids of these clusters are then selected as our\nmean similarity-based positive prompts, which ensures comprehensive coverage\nof the target region while avoiding redundant prompts in the same local area.\nThe number of clusters k is adaptively determined based on the complexity C\nof target region, which is computed as:\n\n               C = Area(υ) + Perimeter(υ),                       (6)\n\nwhere Area(·) and Perimeter(·) measure the area and boundary length of regions.\nThen, the number of clusters k is determined as:\n\n                  k = max(Nmin, min(Nmax, ⌊γ · C⌋)),                   (7)\n\nwhere Nmin = 3 and Nmax = 10 are the minimum and maximum numbers of\nallowed prompts and γ is a scaling factor.\n   For the uncertainty map path, the uncertainty map is from the variance\ncalculation over similarity maps Sp = {Sn}Nfn=1 and identifies the challenging\nregions which require special attention, and the uncertainty map is calculated\nas:\n                                Nf\n                            1\n                 U(x, y) = X (Sn(x, y) −υ(x, y))2,                  (8)\n                       Nf                              n=1\nwhere U ∈RH×W . We similarly perform the pixels selection with the highest\nuncertainty values from U representing regions where the model has the highest\ndecision variance:\n\n                    Quncert = {(x, y)|U(x, y) ≥τuncert} ,                   (9)\n\nwhere τuncert  is the threshold value corresponding to the 95th percentile of\nU. From Quncert, we randomly select 2 points as uncertainty-based positive\nprompts. These prompts specifically target challenging regions that require spe-\ncial attention during segmentation.\n    Finally, the positive point prompts set Qpos can be obtained through merging\ntwo point prompt sets Qmean and Quncert directly:\n\n                        Qpos = Qmean ∪Quncert.                       (10)\n\n6      Y. Zhu et al.\n\nTable 1. Quantitative Comparison (in Dice score %) of different methods on Abd-\nMRI and Abd-CT. The best is shown in bold and the second-best is underlined.\n\n\n                           Abd-MRI                 Abd-CT  Method        Ref.\n                               Liver  LK  RK   Spleen Mean  Liver  LK  RK   Spleen Mean\n\n  PANet [21]   ICCV’19     39.24  26.47  37.35  26.79  32.46  40.29  30.61  26.66  30.21  31.94\n  SSL-ALP [16] TMI’22      70.74  55.49  67.43  58.39  63.01  71.38  34.48  32.32  51.67  47.46\n RPT [29]     MICCAI’23  49.22  42.45  47.14  48.84  46.91  65.87  40.07  35.97  51.22  48.28\n  PATNet [12]  ECCV’22    57.01  50.23  53.01  51.63  52.97  75.94  46.62  42.68  63.94  57.29\n  IFA [13]     CVPR’24    50.22  35.99  34.00  42.21  40.61  46.62  25.13  26.56  24.85  30.79\n  FAMNet [3]   AAAI’25     73.01  57.28  74.68  58.21  65.79  73.57  57.79  61.89  65.78  64.75\n  Ours                    78.16 58.23  72.34  59.65 67.09 78.25 59.41 71.80  60.38  67.46\n\n\nNegative Prompting Strategy. The negative prompting strategy is crucial\nfor accurate boundary delineation, especially in medical images where target\norgans often have similar intensity profiles to surrounding tissues. As shown in\nFig. 1, our negative prompting strategy leverages the periphery similarity map\n˜S to identify regions that should be excluded from the segmentation.\n   From the periphery similarity map ˜S, we perform the pixel selection according\nto the highest similarity values. These pixels represent regions in the query image\nthat are most similar to the periphery of the target organ in the support image.\nFormally, the set of candidate negative prompts Qneg is defined as:\n\n                     n             o                    Qneg =  (x, y)|˜S(x, y) ≥τneg   ,                   (11)\n\nwhere τneg is the threshold value corresponding to the 95th percentile of ˜S.\n\n\n2.4  Query Mask Prediction\n\nAfter generating both positive and negative prompts through MAUP, the final\nstep is to feed these prompts into the SAM model to obtain the segmentation\nmask for the query image. As illustrated in Fig. 1, the positive prompts guide the\nSAM model to include the target regions in the segmentation, while the negative\nprompts help exclude surrounding tissues and refine the boundaries.\n\n\n3  Experiments\n\n3.1  Datasets and Implementation Details\n\nDatasets. We evaluate our proposed method on three diverse medical imaging\ndatasets that represent different modalities and anatomical structures. To be\nspecific, Abd-MRI consists of 20 cases of abdominal MRI scans from the ISBI\n2019 Combined Healthy Organ Segmentation challenge (CHAOS) [9] and Abd-\nCT consists of 20 cases of abdominal CT scans from the MICCAI 2015 multi-\natlas labeling Beyond The Cranial Vault challenge (BTCV) [11]. The Card-\nMRI contains 45 cases of cardiac MRI scans collected from the MICCAI 2019\nMulti-Sequence Cardiac MRI Segmentation Challenge [31].\n\nTitle Suppressed Due to Excessive Length      7\n\nTable 2. Quantitative Comparison (in Dice score %) of different methods on Card-\nMRI. The best value is shown in bold font, and the second-best value is underlined.\n\n\n                                                 Card-MRI\n              Method         Ref.\n                                    LV-BP  LV-MYO   RV   Mean\n\n              PANet [21]     ICCV’19       51.42      25.75     25.75    36.66\n             SSL-ALP [16]  TMI’22        83.47      22.73     66.21    57.47\n           RPT [29]      MICCAI’23    60.84      42.28     57.30    53.47\n             PATNet [12]   ECCV’22      65.35      50.63     68.34    61.44\n              IFA [13]      CVPR’24      50.43      31.32     30.74    37.50\n             FAMNet [3]    AAAI’25      86.64      51.82     76.26    71.58\n               Ours                       88.36    52.74    78.29  73.13\n\n\n\n\n\n   Support  Ground Truth   RPT     FAMNet   MAUP      Support  Ground Truth   RPT     FAMNet   MAUP      Support  Ground Truth   RPT    FAMNet   MAUP\n\n\n\n\n      Liver                                                                            Liver                                                          LV-BP\n\n\n\n\n  Right Kidney                                                                 Right Kidney                                                LV-MYO\n\n\n\n\n    Left Kidney                                                                         Left Kidney                                                RV\n                                                                         Card-MRI\n\n\n\n      Spleen                                                                     Spleen\n           Abd-MRI                        Abd-CT\n\nFig. 3. The qualitative results of our model and compared models in datasets: Abd-\nMRI, Abd-CT and Card-MRI.\n\n\nImplementation Details. We employ the pretrained DINOv2-ViT-L/14 [14]\nas the feature extractor E(·) for the high-quality visual representation. For seg-\nmentation component, we utilize the SAM-ViT-H as encoder of the SAM model,\nwhich leads to the excellent segmentation performance in our task. For a compar-\nison, the metric used to evaluate the performance of 2D slices on 3D volumetric\nground-truth is the Dice score [5]. Our model is implemented with the PyTorch\nv1.12 framework, and all of experiments are conducted on a workstation with\nan NVIDIA 3090 GPU with 24GB memory. To simulate the scarcity of labeled\ndata in medical scenarios, all experiments embrace the 1-way 1-shot setting.\n\n\n3.2  Quantitative and Qualitative Results\n\nTable 1 and Table 2 presents a comprehensive performance comparison between\nour proposed model and several Few-shot Medical Image Segmentation (FSMIS)\nmodels, including PANet [21], SSL-ALP [15], RPT [29], IFA [13] and FAMNet\n[3]. The average dice scores of target organs or regions are compared in this table.\nFor a fair comparison, it is important to note that PANet, SSL-ALP, RPT, IFA\nand FAMNet all employ medical image datasets as source domain and fine-tune\nthe models on them, while ours directly inferences on three target medical image\ndatasets (Abd-MRI, Abd-CT and Card-MRI) in a training-free manner, which\nis much harder than these methods. From the two tables, it can be seen that the\n\n8      Y. Zhu et al.\n\nTable  3.  Ablation  study  with                  70                              Abdominal MRI\ndifferent prompting strategies on                  69\n                                                                                  68                                                 67.09\nAbd-MRI.                          %  67                                                                                  66                       65.74    65.73    66.24             66.23    65.09                                                                                                                                                                                         Score  65              64.51                                                         64.29    64.26\n                                                                                                               DSC  64     63.25\n UMP MMP NP Dice Score (%)                     6362\n  ✓                 65.08                              6160\n  ✓  ✓           66.71                                    5     10    15    20Number25of Similarity30   Maps35    40    50    60\n  ✓  ✓  ✓     67.09        Fig. 4. Ablation study the of number of similarity\n                            maps Nf.\n\n\nproposed method outperforms all listed methods in terms of the mean Dice val-\nues obtained on three datasets. Specifically, our model outperforms second-best\nmodels by 1.3%, 2.71% and 1.55% on Abd-MRI, Abd-CT and Card-MRI. In\naddition to the quantitative comparisons, Fig. 3 shows qualitative results of our\nmodel compared to the alternative model on Abd-MRI, Abd-CT and Card-MRI\ndatasets. The visual evidence clearly demonstrates boundary preservation capa-\nbilities and enhanced generalization performance of our model across different\nanatomical structures and imaging modalities.\n\n\n3.3  Ablation Studies\n\nThe ablation studies are conducted on the Abd-MRI dataset. As illustrated in\nFig. 4, the number of similarity maps Nf (number of divided foreground regions)\nsignificantly influences model performance, with an optimal value yielding the\nhighest Dice score. Table 3 reveals notable performance differences when com-\nparing Uncertainty Map based Prompts (UMP), Mean similarity Map based\nPrompts (MMP) and Negative Prompts (NP). Specifically, the combination of\nthree prompting strategies achieves the highest Dice score compared to partial\nprompting strategies approach.\n\n\n4  Conclusion\n\nIn this paper, we proposed MAUP, a training-free few-shot medical image seg-\nmentation approach that introduces a multi-center adaptive uncertainty-aware\nprompting strategy for the SAM model. By combining spatial diversity, un-\ncertainty guidance, and adaptive prompt optimization, MAUP effectively ad-\ndresses the challenges of medical image segmentation without requiring any ad-\nditional training on medical datasets. Our comprehensive experiments on three\ndiverse medical imaging datasets demonstrate that MAUP outperforms con-\nventional training-based few-shot segmentation models under the training-free\nmanner. The proposed method achieves precise segmentation results across dif-\nferent imaging modalities and anatomical structures, highlighting its potential\nfor real-world clinical applications.\n\nAcknowledgments. This work was supported by the National Natural Science Foun-\ndation of China under Grants 62371235.\n\nTitle Suppressed Due to Excessive Length      9\n\n\nDisclosure of Interests. All authors declare that they have no conflicts of interest\n\n\nReferences\n\n 1. Aurenhammer, F.: Voronoi diagrams: a survey of a fundamental geometric data\n    structure. ACM Computing Surveys (CSUR) 23(3), 345–405 (1991)\n 2. Azad, R., Aghdam, E.K., Rauland, A., Jia, Y., Avval, A.H., Bozorgpour, A., Karim-\n     ijafarbigloo, S., Cohen, J.P., Adeli, E., Merhof, D.: Medical image segmentation\n    review: The success of u-net. IEEE Transactions on Pattern Analysis and Machine\n    Intelligence 46(12), 10076–10095 (2024)\n 3. Bo, Y., Zhu, Y., Li, L., Zhang, H.: Famnet: Frequency-aware matching network\n     for cross-domain few-shot medical image segmentation. In: AAAI Conference on\n     Artificial Intelligence (2025)\n 4. Chen, H., Dong, Y., Lu, Z., Yu, Y., Han, J.: Pixel matching network for cross-\n   domain few-shot segmentation. In: Proceedings of the IEEE/CVF Winter Confer-\n    ence on Applications of Computer Vision. pp. 978–987 (2024)\n 5. Cheng, Z., Wang, S., Xin, T., Zhou, T., Zhang, H., Shao, L.: Few-shot medi-\n    cal image segmentation via generating multiple representative descriptors. IEEE\n    Transactions on Medical Imaging 43(6), 2202–2214 (2024)\n 6. Cheng, Z., Zhu, Y., Wang, S., Xin, T., Zhang, H.: Cascaded alternating refine-\n   ment transformer for few-shot medical image segmentation. ACM Transactions on\n     Intelligent Systems and Technology (2025)\n 7. Huang, K., Zhou, T., Fu, H., Zhang, Y., Zhou, Y., Gong, C., Liang, D.: Learnable\n    prompting sam-induced knowledge distillation for semi-supervised medical image\n    segmentation. IEEE Transactions on Medical Imaging pp. 1–1 (2025)\n 8. Jiang, Y., Shen, Y.: M4oe: A foundation model for medical multimodal image\n    segmentation with mixture of experts. In: Linguraru, M.G., Dou, Q., Feragen,\n    A., Giannarou, S., Glocker, B., Lekadir, K., Schnabel, J.A. (eds.) International\n    Conference on Medical Image Computing and Computer Assisted Intervention.\n    pp. 621–631 (2024)\n 9. Kavur, A.E., Gezer, N.S., Barış, M., Aslan, S., Conze, P.H., Groza, V., Pham,\n    D.D., Chatterjee, S., Ernst, P., Özkan, S., et al.: Chaos challenge-combined (ct-\n   mr) healthy abdominal organ segmentation. Medical Image Analysis 69, 101950\n    (2021)\n10. Kirillov, A., Mintun, E., Ravi, N., Mao, H., Rolland, C., Gustafson, L., Xiao, T.,\n    Whitehead, S., Berg, A.C., Lo, W.Y., et al.: Segment anything. In: Proceedings of\n    the IEEE/CVF international conference on computer vision. pp. 4015–4026 (2023)\n11. Landman, B., Xu, Z., Igelsias, J., Styner, M., Langerak, T., Klein, A.: Miccai multi-\n    atlas labeling beyond the cranial vault–workshop and challenge. In: Proceedings of\n    the MICCAI—Workshop Challenge. vol. 5, p. 12 (2015)\n12. Lei, S., Zhang, X., He, J., Chen, F., Du, B., Lu, C.T.: Cross-domain few-shot\n    semantic segmentation. In: European Conference on Computer Vision. pp. 73–90\n    (2022)\n13. Nie, J., Xing, Y., Zhang, G., Yan, P., Xiao, A., Tan, Y.P., Kot, A.C., Lu, S.:\n    Cross-domain few-shot segmentation via iterative support-query correspondence\n    mining. IEEE/CVF Conference on Computer Vision and Pattern Recognition pp.\n    3380–3390 (2024)\n14. Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V.,\n    Fernandez, P., Haziza, D., Massa, F., El-Nouby, A., et al.: Dinov2: Learning robust\n    visual features without supervision. arXiv preprint arXiv:2304.07193 (2023)\n\n10     Y. Zhu et al.\n\n\n15. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervision\n    with superpixels: Training few-shot medical image segmentation without annota-\n     tion. In: European Conference on Computer Vision. pp. 762–780 (2020)\n16. Ouyang, C., Biffi, C., Chen, C., Kart, T., Qiu, H., Rueckert, D.: Self-supervised\n    learning for few-shot medical image segmentation. IEEE Transactions on Medical\n    Imaging 41(7), 1837–1848 (2022)\n17. Shaker, A., Maaz, M., Rasheed, H., Khan, S., Yang, M.H., Shahbaz Khan, F.:\n   Unetr++: Delving into efficient and accurate 3d medical image segmentation. IEEE\n    Transactions on Medical Imaging 43(9), 3377–3390 (2024)\n18. Song, F., Cheng, Z., Li, L., Zhang, H.: Mtpnet: Learning multiple twin-support\n    prototypes for few-shot medical image segmentation. In: International Conference\n   on Bioinformatics and Biomedicine. pp. 2414–2421 (2024)\n19. Tang, K., Wang, S., Chen, Y.: Cross modulation and region contrast learning\n    network for few-shot medical image segmentation. IEEE Signal Processing Letters\n    31, 1670–1674 (2024)\n20. Tang, S., Yan, S., Qi, X., Gao, J., Ye, M., Zhang, J., Zhu, X.: Few-shot medical\n    image segmentation with high-fidelity prototypes. Medical Image Analysis 100,\n    103412 (2025)\n21. Wang, K., Liew, J.H., Zou, Y., Zhou, D., Feng, J.: Panet: Few-shot image semantic\n    segmentation with prototype alignment. In: proceedings of the IEEE/CVF inter-\n    national conference on computer vision. pp. 9197–9206 (2019)\n22. Wang, R., Yang, Z., Song, Y.: Osam-fundus: A training-free, one-shot segmentation\n    framework for optic disc and cup in fundus images. Biomedical Signal Processing\n   and Control 100, 107069 (2025)\n23. Yang, Y., Fang, X., Li, X., Han, Y., Yu, Z.: Cdsg-sam: A cross-domain  self-\n    generating prompt few-shot brain tumor segmentation pipeline based on sam.\n    Biomedical Signal Processing and Control 100, 106936 (2025)\n24. You, C., Dai, W., Liu, F., Min, Y., Dvornek, N.C., Li, X., Clifton, D.A., Staib,\n     L., Duncan, J.S.: Mine your own anatomy: Revisiting medical image segmentation\n    with extremely limited labels. IEEE Transactions on Pattern Analysis and Machine\n    Intelligence 46(12), 11136–11151 (2024)\n25. Zhang, S., Metaxas, D.: On the challenges and perspectives of foundation models\n     for medical image analysis. Medical Image Analysis 91, 102996 (2024)\n26. Zhang, Y., Li, H., Gao, Y., Duan, H., Huang, Y., Zheng, Y.: Prototype correlation\n    matching and class- relation reasoning for few-shot medical image segmentation.\n   IEEE Transactions on Medical Imaging 43(11), 4041–4054 (2024)\n27. Zhu, W., Chen, X., Qiu, P., Farazi, M., Sotiras, A., Razi, A., Wang, Y.: Selfreg-unet:\n    Self-regularized unet for medical image segmentation. In: International Conference\n   on Medical Image Computing and Computer-Assisted Intervention. pp. 601–611\n    (2024)\n28. Zhu, Y., Li, M., Ye, Q., Wang, S., Xin, T., Zhang, H.: Robustemd: Domain robust\n    matching for cross-domain few-shot medical image segmentation (2025), https:\n    //arxiv.org/abs/2410.01110\n29. Zhu, Y., Wang, S., Xin, T., Zhang, H.: Few-shot medical image segmentation via\n    a region-enhanced prototypical transformer. In: International Conference on Med-\n     ical Image Computing and Computer-Assisted Intervention. pp. 271–280. Springer\n    (2023)\n30. Zhu, Y., Wang, S., Xin, T., Zhang, Z., Zhang, H.: Partition-a-medical-image: Ex-\n    tracting multiple representative subregions for few-shot medical image segmenta-\n     tion. IEEE Transactions on Instrumentation and Measurement 73, 1–12 (2024)\n\nTitle Suppressed Due to Excessive Length     11\n\n\n31. Zhuang, X.: Multivariate mixture model for myocardial segmentation combining\n    multi-source images. IEEE transactions on pattern analysis and machine intelli-\n    gence 41(12), 2933–2946 (2018)",
+  "chunks": []
+}

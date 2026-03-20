@@ -1,0 +1,78 @@
+﻿<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="60" x2="1480" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAF0E6"/>
+      <stop offset="0.55" stop-color="#EEF4FB"/>
+      <stop offset="1" stop-color="#F8FBFF"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="320" y1="130" x2="1270" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#F5F9FF" stop-opacity="0.94"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C96B30"/>
+      <stop offset="1" stop-color="#2F7F86"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1600" height="900" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#23364D" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="42" fill="url(#bg)"/>
+  <circle cx="1380" cy="110" r="150" fill="#F6D9C4" fill-opacity="0.55"/>
+  <circle cx="220" cy="760" r="180" fill="#D9ECF0" fill-opacity="0.55"/>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="86" width="1420" height="728" rx="34" fill="url(#panel)"/>
+  </g>
+
+  <text x="140" y="170" fill="#16324D" font-size="52" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">科研文献多篇比较与研究空白分析平台</text>
+  <text x="140" y="214" fill="#597083" font-size="24" font-family="Microsoft YaHei, PingFang SC, sans-serif">固定工作流负责解析、抽取与对比；两个局部智能体分别负责字段补全与研究空白验证。</text>
+
+  <rect x="140" y="270" width="310" height="386" rx="28" fill="#FFF8F2" stroke="#E7C3AA" stroke-width="2"/>
+  <text x="176" y="326" fill="#C96B30" font-size="28" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">固定 Workflow</text>
+  <text x="176" y="378" fill="#294258" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">1. 创建项目 / 上传论文</text>
+  <text x="176" y="420" fill="#294258" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">2. PDF 解析与 Chunk 切分</text>
+  <text x="176" y="462" fill="#294258" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">3. 结构化抽取</text>
+  <text x="176" y="504" fill="#294258" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">4. 多论文对比</text>
+  <text x="176" y="546" fill="#294258" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">5. 人工确认 / 导出</text>
+  <text x="176" y="612" fill="#7B8EA0" font-size="18" font-family="Microsoft YaHei, PingFang SC, sans-serif">主流程保持确定性，适合稳定复现。</text>
+
+  <rect x="520" y="270" width="278" height="250" rx="28" fill="#F6FBFF" stroke="#BFD9E5" stroke-width="2"/>
+  <text x="556" y="324" fill="#2F7F86" font-size="28" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">字段补全智能体</text>
+  <text x="556" y="376" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">接收问题字段</text>
+  <text x="556" y="414" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">内部检索证据</text>
+  <text x="556" y="452" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">判断是否补全 / 重试</text>
+  <text x="556" y="490" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">输出补全值与证据绑定</text>
+
+  <rect x="520" y="556" width="278" height="180" rx="28" fill="#FFF7FA" stroke="#E4C2D2" stroke-width="2"/>
+  <text x="556" y="612" fill="#A65376" font-size="28" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">人工确认</text>
+  <text x="556" y="662" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">对高风险字段补全结果</text>
+  <text x="556" y="696" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">和高风险 Gap 结论做最终审核</text>
+
+  <rect x="878" y="270" width="420" height="250" rx="28" fill="#F7FCFA" stroke="#C7E3D8" stroke-width="2"/>
+  <text x="914" y="324" fill="#2E7C64" font-size="28" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">研究空白验证智能体</text>
+  <text x="914" y="376" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">接收候选研究空白</text>
+  <text x="914" y="414" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">拆解验证点并检索支持证据</text>
+  <text x="914" y="452" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">检索反证 / 冲突证据与覆盖度</text>
+  <text x="914" y="490" fill="#294258" font-size="21" font-family="Microsoft YaHei, PingFang SC, sans-serif">输出：成立 / 证据弱 / 有冲突 / 不成立</text>
+
+  <rect x="1330" y="270" width="126" height="466" rx="28" fill="#FFFDF8" stroke="#E7DAB6" stroke-width="2"/>
+  <text x="1374" y="336" fill="#9A7D2F" font-size="24" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-weight="700">输出</text>
+  <text x="1374" y="392" fill="#294258" font-size="20" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif">综述草稿</text>
+  <text x="1374" y="456" fill="#294258" font-size="20" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif">组会提纲</text>
+  <text x="1374" y="520" fill="#294258" font-size="20" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif">Gap 分析</text>
+  <text x="1374" y="584" fill="#294258" font-size="20" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif">证据回溯</text>
+
+  <path d="M450 397H498" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M798 397H856" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1298 397H1328" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M659 520V548" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1088 520V548H798" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="499" cy="397" r="8" fill="#C96B30"/>
+  <circle cx="856" cy="397" r="8" fill="#2F7F86"/>
+  <circle cx="1328" cy="397" r="8" fill="#C96B30"/>
+
+  <rect x="140" y="704" width="1158" height="72" rx="22" fill="#17324D" fill-opacity="0.93"/>
+  <text x="176" y="749" fill="#F4F8FB" font-size="22" font-family="Microsoft YaHei, PingFang SC, sans-serif">关键词：PDF 解析 · 结构化抽取 · 字段补全 · 多篇对比 · Gap 验证 · 人工确认 · Markdown / 汇报导出</text>
+</svg>

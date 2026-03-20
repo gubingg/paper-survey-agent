@@ -1,0 +1,27 @@
+﻿# Web backend
+fastapi==0.115.8
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Data validation and persistence
+pydantic==2.10.6
+sqlalchemy==2.0.38
+
+# Frontend
+streamlit==1.42.2
+pandas==2.2.3
+
+# Core services
+requests==2.32.3
+PyMuPDF==1.25.3
+python-dotenv==1.0.1
+
+# Workflow / agent graph
+langgraph==0.2.74
+langchain-core==0.3.43
+
+# Vector store
+chromadb==0.6.3
+
+# Testing
+pytest==8.3.5
