@@ -10,7 +10,7 @@
 <p align="center"><em>首页总览与论文结构化卡片</em></p>
 
 <p align="center">
-  <img src="images/ui-compare.png" width="48%" alt="多篇论文横向对比页" />
+  <img src="images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
   <img src="images/ui-review.png" width="48%" alt="人工确认与审核页" />
 </p>
 <p align="center"><em>横向对比页与人工确认页</em></p>
