@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 
@@ -22,7 +22,7 @@ class VectorStoreService:
 
     def __init__(self) -> None:
         self.embedding_service = EmbeddingService()
-        self.enable_chroma = os.getenv("ENABLE_CHROMA", "false").lower() in {"1", "true", "yes", "on"}
+        self.enable_chroma = os.getenv("ENABLE_CHROMA", "true").lower() in {"1", "true", "yes", "on"}
 
     def index_chunks(self, project_id: str, chunks: list[PaperChunk]) -> dict:
         """Index chunks into a persistent Chroma collection when available."""
