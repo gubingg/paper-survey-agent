@@ -39,9 +39,17 @@
 ### 主流程
 
 ```text
-创建项目 -> 上传 PDF -> 解析文本 -> chunk 切分 -> 结构化抽取 -> 问题字段检测
--> 字段补全智能体 -> 多论文对比 -> 初步 gap 候选生成 -> gap 验证智能体
--> 人工确认 -> 导出结果
+创建项目
+-> 上传多篇PDF
+-> 解析文本
+-> 文本切分
+   ├-> 结构化抽取 -> 论文信息卡
+   └-> 建立Chroma向量库
+-> 问题字段检测 -> 字段补全智能体（基于向量库检索）
+-> 多论文对比（基于论文信息卡）
+-> 初步 Gap 候选生成 -> Gap 验证智能体（结合对比结果 + 检索证据）
+-> 人工确认
+-> 导出结果
 ```
 
 ### 局部智能体
@@ -147,6 +155,7 @@ DASHSCOPE_API_KEY=your_key
 QWEN_MODEL_NAME=qwen3-max
 QWEN_MAX_MODEL_NAME=qwen3-max
 TEXT_EMBEDDING_MODEL_NAME=text-embedding-v4
+ENABLE_CHROMA=true
 DATABASE_URL=sqlite:///./paper_survey_agent.db
 ```
 
