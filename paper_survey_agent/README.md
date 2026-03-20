@@ -1,4 +1,4 @@
-﻿# 科研文献多篇比较与研究空白分析平台
+# 科研文献多篇比较与研究空白分析平台
 
 这是一个基于 `FastAPI + Streamlit + LangGraph` 的科研工作流系统，采用“固定工作流 + 两个局部智能体”的混合架构。系统面向多篇论文综述、组会汇报准备和研究空白分析，支持从 PDF 上传、结构化抽取、多篇对比，到字段补全、研究空白验证和结果导出的一整套流程。
 
@@ -14,6 +14,10 @@
   <img src="images/ui-review.png" width="48%" alt="人工确认与审核页" />
 </p>
 <p align="center"><em>横向对比页与人工确认页</em></p>
+<p align="center">
+  <img src="images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
+</p>
+<p align="center"><em>结果导出页</em></p>
 
 ## 当前状态
 
