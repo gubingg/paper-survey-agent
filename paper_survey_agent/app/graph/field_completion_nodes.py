@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.graph.state import append_log, coerce_field_state
 from app.services.field_completion_service import FieldCompletionService
@@ -39,10 +39,11 @@ def build_retrieval_query_node(state):
 
 def retrieve_internal_evidence_node(state):
     graph_state = coerce_field_state(state)
-    evidence = vector_store_service.query_chunks(
+    evidence = vector_store_service.retrieve_evidence(
         project_id=graph_state.project_id,
         query=graph_state.retrieval_query,
         chunks=graph_state.chunks,
+        evidence_type="field_completion",
         paper_id=graph_state.paper_id,
         top_k=4,
     )

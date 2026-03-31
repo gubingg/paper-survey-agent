@@ -1,8 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -13,6 +14,7 @@ from app.db.models import (
     PaperChunkRecord,
     PaperSchemaRecord,
     Project,
+    ProjectPaper,
     Task,
 )
 from app.schemas.agent_schema import (
@@ -20,15 +22,25 @@ from app.schemas.agent_schema import (
     FieldCompletionResult,
     FieldCompletionReviewRequest,
 )
+from app.schemas.api_schema import ProjectSummary
 from app.schemas.gap_schema import EnrichmentEvidence, GapCandidate, GapReviewRequest
 from app.schemas.paper_schema import PaperChunk, PaperSchema
 from app.utils.chunk_utils import extract_year
+from app.utils.gap_validation_utils import resolve_gap_validation_level
 
 
 LIST_FIELDS = {"datasets", "metrics", "limitations", "future_work", "keywords", "strengths"}
 
 
-def create_project(db: Session, name: str, topic: str, target_type: str) -> Project:
+def create_project(
+    db: Session,
+    name: str,
+    topic: str,
+    target_type: str,
+    focus_dimensions: list[str] | None = None,
+    user_requirements: str = "",
+    gap_validation_level: str | None = None,
+) -> Project:
     """Create a project record."""
 
     project = Project(
@@ -36,11 +48,41 @@ def create_project(db: Session, name: str, topic: str, target_type: str) -> Proj
         name=name,
         topic=topic,
         target_type=target_type,
+        focus_dimensions=focus_dimensions or [],
+        user_requirements=user_requirements,
+        gap_validation_level=resolve_gap_validation_level(target_type, gap_validation_level),
     )
     db.add(project)
     db.commit()
     db.refresh(project)
     return project
+
+
+def list_projects(db: Session) -> list[ProjectSummary]:
+    """List all projects with paper counts."""
+
+    stmt = (
+        select(Project, func.count(ProjectPaper.paper_id))
+        .outerjoin(ProjectPaper, ProjectPaper.project_id == Project.id)
+        .group_by(Project.id)
+        .order_by(Project.created_at.desc())
+    )
+    summaries: list[ProjectSummary] = []
+    for project, paper_count in db.execute(stmt).all():
+        summaries.append(
+            ProjectSummary(
+                project_id=project.id,
+                project_name=project.name,
+                topic=project.topic,
+                target_type=project.target_type,
+                focus_dimensions=project.focus_dimensions or [],
+                user_requirements=project.user_requirements or "",
+                gap_validation_level=resolve_gap_validation_level(project.target_type, project.gap_validation_level),
+                created_at=project.created_at,
+                paper_count=int(paper_count or 0),
+            )
+        )
+    return summaries
 
 
 def get_project(db: Session, project_id: str) -> Project | None:
@@ -49,32 +91,115 @@ def get_project(db: Session, project_id: str) -> Project | None:
     return db.get(Project, project_id)
 
 
-def create_paper(db: Session, project_id: str, file_path: str, title: str = "") -> Paper:
-    """Create a paper record."""
-
-    paper = Paper(
-        id=f"paper_{uuid.uuid4().hex[:8]}",
-        project_id=project_id,
-        file_path=file_path,
-        title=title,
-    )
-    db.add(paper)
-    db.commit()
-    db.refresh(paper)
-    return paper
-
-
 def get_paper(db: Session, paper_id: str) -> Paper | None:
     """Fetch a paper by id."""
 
     return db.get(Paper, paper_id)
 
 
-def list_project_papers(db: Session, project_id: str) -> list[Paper]:
-    """List all papers in a project."""
+def get_paper_by_hash(db: Session, file_hash: str) -> Paper | None:
+    """Fetch a globally stored paper by sha256 hash."""
 
-    stmt = select(Paper).where(Paper.project_id == project_id).order_by(Paper.id)
+    if not file_hash:
+        return None
+    stmt = select(Paper).where(Paper.file_hash == file_hash)
+    return db.scalar(stmt)
+
+
+def link_paper_to_project(db: Session, project_id: str, paper_id: str) -> bool:
+    """Create a project-paper link if it does not already exist."""
+
+    link = db.get(ProjectPaper, {"project_id": project_id, "paper_id": paper_id})
+    if link is not None:
+        return False
+    db.add(ProjectPaper(project_id=project_id, paper_id=paper_id))
+    return True
+
+
+def create_or_link_paper(
+    db: Session,
+    project_id: str,
+    *,
+    file_path: str,
+    file_hash: str,
+    title: str = "",
+    original_filename: str = "",
+) -> tuple[Paper, bool, bool]:
+    """Create one global paper or reuse it, then link it to the project."""
+
+    paper = get_paper_by_hash(db, file_hash)
+    created_new = False
+    if paper is None:
+        paper = Paper(
+            id=f"paper_{uuid.uuid4().hex[:8]}",
+            project_id=project_id,
+            file_path=file_path,
+            file_hash=file_hash,
+            original_filename=original_filename,
+            title=title,
+        )
+        db.add(paper)
+        db.flush()
+        created_new = True
+    else:
+        if not paper.original_filename and original_filename:
+            paper.original_filename = original_filename
+        if title and not paper.title:
+            paper.title = title
+        if not paper.project_id:
+            paper.project_id = project_id
+
+    linked_new = link_paper_to_project(db, project_id, paper.id)
+    db.commit()
+    db.refresh(paper)
+    return paper, created_new, linked_new
+
+
+def list_project_papers(db: Session, project_id: str) -> list[Paper]:
+    """List all globally stored papers linked to one project."""
+
+    stmt = (
+        select(Paper)
+        .join(ProjectPaper, ProjectPaper.paper_id == Paper.id)
+        .where(ProjectPaper.project_id == project_id)
+        .order_by(Paper.id)
+    )
+    papers = list(db.scalars(stmt))
+    if papers:
+        return papers
+
+    legacy_stmt = select(Paper).where(Paper.project_id == project_id).order_by(Paper.id)
+    return list(db.scalars(legacy_stmt))
+
+
+def list_project_paper_ids(db: Session, project_id: str) -> list[str]:
+    """Return linked paper ids for one project."""
+
+    stmt = select(ProjectPaper.paper_id).where(ProjectPaper.project_id == project_id)
+    paper_ids = list(db.scalars(stmt))
+    if paper_ids:
+        return paper_ids
+    legacy_stmt = select(Paper.id).where(Paper.project_id == project_id)
+    return list(db.scalars(legacy_stmt))
+
+
+def list_other_project_ids_for_paper(db: Session, paper_id: str, *, excluding_project_id: str | None = None) -> list[str]:
+    """List other projects that still reference one paper."""
+
+    stmt = select(ProjectPaper.project_id).where(ProjectPaper.paper_id == paper_id)
+    if excluding_project_id:
+        stmt = stmt.where(ProjectPaper.project_id != excluding_project_id)
     return list(db.scalars(stmt))
+
+
+def update_paper_owner_project(db: Session, paper_id: str, owner_project_id: str | None) -> None:
+    """Update the owner-project pointer kept for compatibility."""
+
+    paper = get_paper(db, paper_id)
+    if paper is None:
+        return
+    paper.project_id = owner_project_id
+    db.commit()
 
 
 def update_paper_metadata(db: Session, paper_id: str, title: str | None = None, year: int | None = None) -> None:
@@ -118,8 +243,7 @@ def list_chunks_by_paper(db: Session, paper_id: str) -> list[PaperChunkRecord]:
 def list_project_chunks(db: Session, project_id: str) -> list[PaperChunkRecord]:
     """Fetch all chunks for a project."""
 
-    papers = list_project_papers(db, project_id)
-    paper_ids = [paper.id for paper in papers]
+    paper_ids = list_project_paper_ids(db, project_id)
     if not paper_ids:
         return []
     stmt = select(PaperChunkRecord).where(PaperChunkRecord.paper_id.in_(paper_ids)).order_by(PaperChunkRecord.paper_id)
@@ -134,7 +258,7 @@ def _coerce_schema_field(field_name: str, value):
             return []
         return [str(value)]
     if isinstance(value, list):
-        return "；".join(str(item) for item in value if str(item).strip())
+        return " | ".join(str(item) for item in value if str(item).strip())
     return value or ""
 
 
@@ -207,7 +331,7 @@ def list_project_schemas(db: Session, project_id: str) -> list[PaperSchema]:
     schemas: list[PaperSchema] = []
     for paper in papers:
         if paper.schema_record is None:
-            fallback_title = paper.title or paper.file_path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1]
+            fallback_title = paper.title or paper.original_filename or paper.file_path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1]
             schemas.append(
                 PaperSchema(
                     paper_id=paper.id,
@@ -306,7 +430,7 @@ def _field_completion_record_to_model(record: FieldCompletionRecord) -> FieldCom
 def upsert_field_completion_result(db: Session, project_id: str, result: FieldCompletionResult) -> FieldCompletionRecord:
     """Insert or update a field completion result."""
 
-    record_id = f"{result.paper_id}:{result.field_name}"
+    record_id = f"{project_id}:{result.paper_id}:{result.field_name}"
     record = db.get(FieldCompletionRecord, record_id)
     if record is None:
         record = FieldCompletionRecord(id=record_id, project_id=project_id, paper_id=result.paper_id, field_name=result.field_name)
@@ -347,7 +471,7 @@ def list_paper_field_completions(db: Session, project_id: str, paper_id: str) ->
 def get_field_completion(db: Session, project_id: str, paper_id: str, field_name: str) -> FieldCompletionResult | None:
     """Fetch one field completion result."""
 
-    record = db.get(FieldCompletionRecord, f"{paper_id}:{field_name}")
+    record = db.get(FieldCompletionRecord, f"{project_id}:{paper_id}:{field_name}")
     if record is None or record.project_id != project_id:
         return None
     return _field_completion_record_to_model(record)
@@ -360,7 +484,7 @@ def review_field_completion(
 ) -> FieldCompletionResult | None:
     """Apply a review action to a field completion result and sync the schema."""
 
-    record = db.get(FieldCompletionRecord, f"{request.paper_id}:{request.field_name}")
+    record = db.get(FieldCompletionRecord, f"{project_id}:{request.paper_id}:{request.field_name}")
     if record is None or record.project_id != project_id:
         return None
 
@@ -385,16 +509,32 @@ def _gap_record_to_model(record: GapCandidateRecord) -> GapCandidate:
     return GapCandidate(
         gap_id=record.id,
         project_id=record.project_id,
+        original_statement=record.original_statement or record.statement,
         statement=record.statement,
+        source_context=record.source_context or "",
         supporting_papers=record.supporting_papers or [],
         evidence_summary=record.evidence_summary or [],
         supporting_evidence=[EvidenceSnippet.model_validate(item) for item in (record.supporting_evidence or [])],
         counter_evidence=[EvidenceSnippet.model_validate(item) for item in (record.counter_evidence or [])],
         coverage_count=record.coverage_count,
         validation_result=record.validation_result,
+        validation_level=record.validation_level or "raw",
         confidence=record.confidence,
         suggested_direction=record.suggested_direction,
+        validation_reason=record.validation_reason or "",
+        normalized_gap=record.normalized_gap or {},
+        support_strength=record.support_strength or "",
+        support_reason=record.support_reason or "",
+        support_count=record.support_count or 0,
+        distinct_paper_count=record.distinct_paper_count or 0,
+        counter_strength=record.counter_strength or "",
+        counter_reason=record.counter_reason or "",
+        coverage_status=record.coverage_status or "",
+        coverage_reason=record.coverage_reason or "",
+        coverage_risks=record.coverage_risks or [],
+        external_search_used=record.external_search_used,
         requires_human_review=record.requires_human_review,
+        human_review_reason=record.human_review_reason or "",
         status=record.status,
     )
 
@@ -424,16 +564,32 @@ def replace_gap_candidates(db: Session, project_id: str, candidates: list[GapCan
             GapCandidateRecord(
                 id=candidate.gap_id,
                 project_id=project_id,
+                original_statement=candidate.original_statement or candidate.statement,
                 statement=candidate.statement,
+                source_context=candidate.source_context,
                 supporting_papers=candidate.supporting_papers,
                 evidence_summary=candidate.evidence_summary,
                 supporting_evidence=[item.model_dump() for item in candidate.supporting_evidence],
                 counter_evidence=[item.model_dump() for item in candidate.counter_evidence],
                 coverage_count=candidate.coverage_count,
                 validation_result=candidate.validation_result,
+                validation_level=candidate.validation_level,
                 confidence=candidate.confidence,
                 suggested_direction=candidate.suggested_direction,
+                validation_reason=candidate.validation_reason,
+                normalized_gap=candidate.normalized_gap,
+                support_strength=candidate.support_strength,
+                support_reason=candidate.support_reason,
+                support_count=candidate.support_count,
+                distinct_paper_count=candidate.distinct_paper_count,
+                counter_strength=candidate.counter_strength,
+                counter_reason=candidate.counter_reason,
+                coverage_status=candidate.coverage_status,
+                coverage_reason=candidate.coverage_reason,
+                coverage_risks=candidate.coverage_risks,
+                external_search_used=candidate.external_search_used,
                 requires_human_review=candidate.requires_human_review,
+                human_review_reason=candidate.human_review_reason,
                 status=candidate.status,
             )
         )
@@ -461,3 +617,29 @@ def review_gap_candidate(db: Session, project_id: str, request: GapReviewRequest
     db.commit()
     db.refresh(record)
     return _gap_record_to_model(record)
+
+
+def delete_project_records(db: Session, project_id: str) -> None:
+    """Delete project-local records while leaving shared paper assets intact."""
+
+    db.query(FieldCompletionRecord).filter(FieldCompletionRecord.project_id == project_id).delete()
+    db.query(GapCandidateRecord).filter(GapCandidateRecord.project_id == project_id).delete()
+    db.query(Task).filter(Task.project_id == project_id).delete()
+    db.query(ProjectPaper).filter(ProjectPaper.project_id == project_id).delete()
+    db.query(Project).filter(Project.id == project_id).delete()
+    db.commit()
+
+
+def delete_paper_asset(db: Session, paper_id: str) -> None:
+    """Delete one orphaned paper and all of its persistent DB records."""
+
+    db.query(FieldCompletionRecord).filter(FieldCompletionRecord.paper_id == paper_id).delete()
+    db.query(EnrichmentRecord).filter(EnrichmentRecord.paper_id == paper_id).delete()
+    db.query(PaperChunkRecord).filter(PaperChunkRecord.paper_id == paper_id).delete()
+    db.query(PaperSchemaRecord).filter(PaperSchemaRecord.paper_id == paper_id).delete()
+    db.query(ProjectPaper).filter(ProjectPaper.paper_id == paper_id).delete()
+    db.query(Paper).filter(Paper.id == paper_id).delete()
+    db.commit()
+
+
+

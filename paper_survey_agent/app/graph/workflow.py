@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from functools import lru_cache
 
@@ -14,9 +14,10 @@ from app.graph.edges import (
     GENERATE_GAP_CANDIDATES_NODE,
     HUMAN_REVIEW_NODE,
     INDEX_NODE,
+    LIGHT_GAP_VALIDATION_NODE,
     PARSE_NODE,
     RUN_FIELD_COMPLETION_AGENT_NODE,
-    RUN_GAP_VALIDATION_AGENT_NODE,
+    STRICT_GAP_VALIDATION_NODE,
     route_after_gap_generation,
     route_after_problem_detection,
 )
@@ -30,9 +31,10 @@ from app.graph.nodes import (
     generate_gap_candidates_node,
     human_review_node,
     index_chunks_node,
+    light_gap_validation_node,
     parse_papers_node,
     run_field_completion_agent_node,
-    run_gap_validation_agent_node,
+    strict_gap_validation_node,
 )
 from app.schemas.graph_state import MainWorkflowState
 
@@ -51,7 +53,8 @@ def get_workflow():
     builder.add_node(RUN_FIELD_COMPLETION_AGENT_NODE, run_field_completion_agent_node)
     builder.add_node(COMPARE_NODE, compare_papers_node)
     builder.add_node(GENERATE_GAP_CANDIDATES_NODE, generate_gap_candidates_node)
-    builder.add_node(RUN_GAP_VALIDATION_AGENT_NODE, run_gap_validation_agent_node)
+    builder.add_node(LIGHT_GAP_VALIDATION_NODE, light_gap_validation_node)
+    builder.add_node(STRICT_GAP_VALIDATION_NODE, strict_gap_validation_node)
     builder.add_node(HUMAN_REVIEW_NODE, human_review_node)
     builder.add_node(EXPORT_NODE, export_results_node)
 
@@ -75,11 +78,13 @@ def get_workflow():
         GENERATE_GAP_CANDIDATES_NODE,
         route_after_gap_generation,
         {
-            RUN_GAP_VALIDATION_AGENT_NODE: RUN_GAP_VALIDATION_AGENT_NODE,
+            LIGHT_GAP_VALIDATION_NODE: LIGHT_GAP_VALIDATION_NODE,
+            STRICT_GAP_VALIDATION_NODE: STRICT_GAP_VALIDATION_NODE,
             HUMAN_REVIEW_NODE: HUMAN_REVIEW_NODE,
         },
     )
-    builder.add_edge(RUN_GAP_VALIDATION_AGENT_NODE, HUMAN_REVIEW_NODE)
+    builder.add_edge(LIGHT_GAP_VALIDATION_NODE, HUMAN_REVIEW_NODE)
+    builder.add_edge(STRICT_GAP_VALIDATION_NODE, HUMAN_REVIEW_NODE)
     builder.add_edge(HUMAN_REVIEW_NODE, EXPORT_NODE)
     builder.add_edge(EXPORT_NODE, END)
     return builder.compile()

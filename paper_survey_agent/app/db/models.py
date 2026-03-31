@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime
 
@@ -19,30 +19,49 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     topic: Mapped[str] = mapped_column(Text, nullable=False)
     target_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    focus_dimensions: Mapped[list] = mapped_column(JSON, default=list)
+    domain_hint: Mapped[str] = mapped_column(String(128), default="")
+    user_requirements: Mapped[str] = mapped_column(Text, default="")
+    gap_validation_level: Mapped[str] = mapped_column(String(16), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    papers: Mapped[list["Paper"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    paper_links: Mapped[list["ProjectPaper"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     tasks: Mapped[list["Task"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     gaps: Mapped[list["GapCandidateRecord"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     field_completions: Mapped[list["FieldCompletionRecord"]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
 
 class Paper(Base):
-    """Uploaded paper metadata."""
+    """Globally stored paper metadata."""
 
     __tablename__ = "papers"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), index=True, nullable=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    file_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    original_filename: Mapped[str] = mapped_column(Text, default="")
     title: Mapped[str] = mapped_column(Text, default="")
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    project: Mapped[Project] = relationship(back_populates="papers")
+    project_links: Mapped[list["ProjectPaper"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     chunks: Mapped[list["PaperChunkRecord"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     schema_record: Mapped["PaperSchemaRecord | None"] = relationship(back_populates="paper", cascade="all, delete-orphan")
     enrichments: Mapped[list["EnrichmentRecord"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     field_completions: Mapped[list["FieldCompletionRecord"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+
+
+class ProjectPaper(Base):
+    """Many-to-many link between projects and globally stored papers."""
+
+    __tablename__ = "project_papers"
+
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), primary_key=True)
+    paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id"), primary_key=True)
+    linked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    project: Mapped[Project] = relationship(back_populates="paper_links")
+    paper: Mapped[Paper] = relationship(back_populates="project_links")
 
 
 class PaperChunkRecord(Base):
@@ -130,16 +149,32 @@ class GapCandidateRecord(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    original_statement: Mapped[str] = mapped_column(Text, default="")
     statement: Mapped[str] = mapped_column(Text, nullable=False)
+    source_context: Mapped[str] = mapped_column(Text, default="")
     supporting_papers: Mapped[list] = mapped_column(JSON, default=list)
     evidence_summary: Mapped[list] = mapped_column(JSON, default=list)
     supporting_evidence: Mapped[list] = mapped_column(JSON, default=list)
     counter_evidence: Mapped[list] = mapped_column(JSON, default=list)
     coverage_count: Mapped[int] = mapped_column(Integer, default=0)
     validation_result: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    validation_level: Mapped[str] = mapped_column(String(16), default="raw")
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     suggested_direction: Mapped[str] = mapped_column(Text, default="")
+    validation_reason: Mapped[str] = mapped_column(Text, default="")
+    normalized_gap: Mapped[dict] = mapped_column(JSON, default=dict)
+    support_strength: Mapped[str] = mapped_column(String(16), default="")
+    support_reason: Mapped[str] = mapped_column(Text, default="")
+    support_count: Mapped[int] = mapped_column(Integer, default=0)
+    distinct_paper_count: Mapped[int] = mapped_column(Integer, default=0)
+    counter_strength: Mapped[str] = mapped_column(String(16), default="")
+    counter_reason: Mapped[str] = mapped_column(Text, default="")
+    coverage_status: Mapped[str] = mapped_column(String(16), default="")
+    coverage_reason: Mapped[str] = mapped_column(Text, default="")
+    coverage_risks: Mapped[list] = mapped_column(JSON, default=list)
+    external_search_used: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_human_review: Mapped[bool] = mapped_column(Boolean, default=False)
+    human_review_reason: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="pending")
 
     project: Mapped[Project] = relationship(back_populates="gaps")

@@ -1,7 +1,5 @@
 ﻿from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
@@ -15,11 +13,12 @@ from app.schemas.api_schema import (
     TranslateProjectResponse,
     UploadPapersResponse,
 )
+from app.services.project_service import ProjectService
 from app.services.translation_service import TranslationService
-from app.utils.file_utils import save_upload_file
 
 router = APIRouter(tags=["papers"])
 translation_service = TranslationService()
+project_service = ProjectService()
 
 
 @router.post("/api/projects/{project_id}/papers/upload", response_model=UploadPapersResponse)
@@ -28,25 +27,15 @@ def upload_papers(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ) -> UploadPapersResponse:
-    """Upload multiple paper PDFs into a project."""
+    """Upload multiple paper PDFs into a project with global deduplication."""
 
-    project = crud.get_project(db, project_id)
-    if project is None:
+    if crud.get_project(db, project_id) is None:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    paper_ids: list[str] = []
-    file_paths: list[str] = []
     try:
-        for upload in files:
-            if Path(upload.filename).suffix.lower() != ".pdf":
-                raise HTTPException(status_code=400, detail=f"Only PDF files are allowed: {upload.filename}")
-            file_path = save_upload_file(project_id, upload)
-            paper = crud.create_paper(db, project_id=project_id, file_path=file_path, title=Path(upload.filename).stem)
-            paper_ids.append(paper.id)
-            file_paths.append(file_path)
-        return UploadPapersResponse(paper_ids=paper_ids, file_paths=file_paths)
-    except HTTPException:
-        raise
+        return project_service.upload_papers(db, project_id, files)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to upload papers: {exc}") from exc
 

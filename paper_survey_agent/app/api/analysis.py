@@ -8,25 +8,17 @@ from sqlalchemy.orm import Session
 from app.db import crud
 from app.db.session import get_db
 from app.graph.workflow import run_workflow
-from app.schemas.api_schema import (
-    AnalyzeProjectRequest,
-    AnalyzeProjectResponse,
-    CompareResponse,
-    TaskResponse,
-)
+from app.schemas.api_schema import AnalyzeProjectRequest, AnalyzeProjectResponse, CompareResponse, TaskResponse
 from app.schemas.graph_state import MainWorkflowState
 from app.services.compare_service import CompareService
+from app.utils.gap_validation_utils import resolve_gap_validation_level
 
 router = APIRouter(tags=["analysis"])
 compare_service = CompareService()
 
 
 @router.post("/api/projects/{project_id}/analyze", response_model=AnalyzeProjectResponse)
-def analyze_project(
-    project_id: str,
-    payload: AnalyzeProjectRequest,
-    db: Session = Depends(get_db),
-) -> AnalyzeProjectResponse:
+def analyze_project(project_id: str, payload: AnalyzeProjectRequest, db: Session = Depends(get_db)) -> AnalyzeProjectResponse:
     """Run the analysis workflow synchronously."""
 
     project = crud.get_project(db, project_id)
@@ -41,23 +33,25 @@ def analyze_project(
     crud.update_task(db, task.id, status="running", current_step="workflow", progress=10, logs=["Workflow started."])
 
     try:
+        requested_level = payload.gap_validation_level or project.gap_validation_level or ""
+        effective_level = resolve_gap_validation_level(
+            project.target_type,
+            payload.gap_validation_level,
+            project.gap_validation_level,
+        )
         initial_state = MainWorkflowState(
             project_id=project.id,
             topic=project.topic,
             target_type=project.target_type,
+            focus_dimensions=project.focus_dimensions or [],
+            user_requirements=project.user_requirements or "",
+            gap_validation_level=requested_level or effective_level,
+            effective_validation_level=effective_level,
             paper_ids=[paper.id for paper in papers],
-            enable_gap_analysis=payload.enable_gap_analysis,
             enable_external_search=payload.enable_external_search,
         )
         final_state = run_workflow(initial_state)
-        crud.update_task(
-            db,
-            task.id,
-            status="completed",
-            current_step="done",
-            progress=100,
-            logs=final_state.logs,
-        )
+        crud.update_task(db, task.id, status="completed", current_step="done", progress=100, logs=final_state.logs)
         return AnalyzeProjectResponse(task_id=task.id, status="completed")
     except Exception as exc:
         error_logs = [str(exc), traceback.format_exc()]
@@ -92,7 +86,12 @@ def get_compare_result(project_id: str, db: Session = Depends(get_db)) -> Compar
 
     try:
         paper_schemas = crud.list_project_schemas(db, project_id)
-        compare_result = compare_service.build_compare_result(paper_schemas, topic=project.topic)
+        compare_result = compare_service.build_compare_result(
+            paper_schemas,
+            topic=project.topic,
+            focus_dimensions=project.focus_dimensions or [],
+            user_requirements=project.user_requirements or "",
+        )
         return CompareResponse(project_id=project_id, compare_result=compare_result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to build compare result: {exc}") from exc

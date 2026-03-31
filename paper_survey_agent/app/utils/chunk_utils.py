@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
+import hashlib
 import re
-import uuid
 from collections import Counter
 
 from app.schemas.paper_schema import PaperChunk, ParsedPage
@@ -132,9 +132,11 @@ def build_chunks(
         content = "\n\n".join(parts).strip()
         if not content:
             return
+        chunk_source = f"{paper_id}:{min(pages_used)}:{max(pages_used)}:{content}"
+        chunk_id = f"chunk_{hashlib.sha1(chunk_source.encode('utf-8')).hexdigest()[:16]}"
         chunks.append(
             PaperChunk(
-                chunk_id=f"chunk_{uuid.uuid4().hex[:10]}",
+                chunk_id=chunk_id,
                 paper_id=paper_id,
                 section=infer_section(content),
                 page_start=min(pages_used),

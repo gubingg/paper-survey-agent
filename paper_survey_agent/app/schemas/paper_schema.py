@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Literal
 
@@ -84,6 +84,9 @@ class CompareResult(BaseModel):
 
     rows: list[CompareMatrixRow] = Field(default_factory=list)
     trend_summary: str = ""
+    cross_paper_summary: str = ""
+    method_comparison: list[str] = Field(default_factory=list)
+    limitations_summary: str = ""
     method_categories: list[str] = Field(default_factory=list)
     dataset_trends: list[str] = Field(default_factory=list)
     metric_trends: list[str] = Field(default_factory=list)

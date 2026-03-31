@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
@@ -13,17 +13,24 @@ class MainWorkflowState(BaseModel):
     project_id: str
     topic: str = ""
     target_type: str = "meeting_outline"
+    focus_dimensions: list[str] = Field(default_factory=list)
+    user_requirements: str = ""
+    gap_validation_level: str = "light"
+    effective_validation_level: str = "light"
     paper_ids: list[str] = Field(default_factory=list)
     parsed_papers: list[ParsedPaper] = Field(default_factory=list)
     paper_schemas: list[PaperSchema] = Field(default_factory=list)
     problem_fields: list[FieldProblem] = Field(default_factory=list)
     field_completion_results: list[FieldCompletionResult] = Field(default_factory=list)
     compare_result: CompareResult | None = None
-    gap_candidates: list[GapCandidate] = Field(default_factory=list)
+    gap_candidates_raw: list[GapCandidate] = Field(default_factory=list)
+    gap_candidates_light_validated: list[GapCandidate] = Field(default_factory=list)
+    gap_candidates_strict_validated: list[GapCandidate] = Field(default_factory=list)
+    validated_gap_candidates: list[GapCandidate] = Field(default_factory=list)
+    final_gap_candidates: list[GapCandidate] = Field(default_factory=list)
     approved_gaps: list[GapCandidate] = Field(default_factory=list)
     export_payload: dict | None = None
     logs: list[str] = Field(default_factory=list)
-    enable_gap_analysis: bool = True
     enable_external_search: bool = False
 
 
@@ -53,17 +60,33 @@ class GapValidationAgentState(BaseModel):
     project_id: str
     gap_id: str
     gap_statement: str
+    normalized_gap: dict = Field(default_factory=dict)
     supporting_evidence: list[EvidenceSnippet] = Field(default_factory=list)
     counter_evidence: list[EvidenceSnippet] = Field(default_factory=list)
     coverage_count: int = 0
     retry_count: int = 0
     validation_result: str | None = None
+    validation_reason: str = ""
     confidence: float = 0.0
     requires_human_review: bool = False
+    human_review_reason: str = ""
     evidence_sufficient: bool = False
     candidate: GapCandidate | None = None
     compare_result: CompareResult | None = None
     paper_schemas: list[PaperSchema] = Field(default_factory=list)
     chunks: list[PaperChunk] = Field(default_factory=list)
     verification_points: list[str] = Field(default_factory=list)
+    support_queries: list[str] = Field(default_factory=list)
+    counter_queries: list[str] = Field(default_factory=list)
+    support_strength: str = ""
+    support_reason: str = ""
+    support_count: int = 0
+    distinct_paper_count: int = 0
+    counter_strength: str = ""
+    counter_reason: str = ""
+    coverage_status: str = ""
+    coverage_reason: str = ""
+    coverage_risks: list[str] = Field(default_factory=list)
+    external_search_used: bool = False
+    enable_external_search: bool = False
     logs: list[str] = Field(default_factory=list)

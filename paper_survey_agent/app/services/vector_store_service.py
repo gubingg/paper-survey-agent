@@ -18,14 +18,26 @@ except Exception:
 
 
 class VectorStoreService:
-    """Chroma vector index wrapper with local fallback retrieval."""
+    """retrieve-evidence skill entry backed by Chroma or lexical fallback."""
+
+    EVIDENCE_TYPE_ALIASES = {
+        "field_completion": "field_completion",
+        "comparison_support": "comparison_support",
+        "gap_support": "support",
+        "gap_counter": "counter",
+        "gap_coverage": "coverage",
+        "support": "support",
+        "counter": "counter",
+        "coverage": "coverage",
+    }
 
     def __init__(self) -> None:
         self.embedding_service = EmbeddingService()
         self.enable_chroma = os.getenv("ENABLE_CHROMA", "true").lower() in {"1", "true", "yes", "on"}
+        self.collection_name = os.getenv("CHROMA_COLLECTION_NAME", "paper_chunks")
 
     def index_chunks(self, project_id: str, chunks: list[PaperChunk]) -> dict:
-        """Index chunks into a persistent Chroma collection when available."""
+        """Index chunks into a persistent shared Chroma collection when available."""
 
         if not chunks:
             return {"enabled": False, "indexed": 0, "reason": "No chunks to index."}
@@ -36,7 +48,7 @@ class VectorStoreService:
 
         try:
             client = self._build_client()
-            collection = client.get_or_create_collection(name=f"project_{project_id}")
+            collection = client.get_or_create_collection(name=self.collection_name)
             documents = [chunk.content for chunk in chunks]
             embeddings = self.embedding_service.embed_texts(documents)
             metadatas = [
@@ -50,11 +62,51 @@ class VectorStoreService:
             ]
             ids = [chunk.chunk_id for chunk in chunks]
             collection.upsert(ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas)
-            logger.info("Indexed %s chunks for project %s", len(chunks), project_id)
+            logger.info("Indexed %s chunks for project %s into collection %s", len(chunks), project_id, self.collection_name)
             return {"enabled": True, "indexed": len(chunks), "reason": "Indexed successfully."}
         except Exception as exc:
             logger.warning("Chroma indexing failed, switching to local retrieval fallback: %s", exc)
             return {"enabled": False, "indexed": 0, "reason": f"Chroma indexing failed: {exc}"}
+
+    def delete_paper_chunks(self, paper_id: str) -> dict:
+        """Delete all indexed chunks for one paper from the shared Chroma collection."""
+
+        if chromadb is None:
+            return {"enabled": False, "reason": "chromadb is not available."}
+        try:
+            client = self._build_client()
+            collection = client.get_collection(name=self.collection_name)
+            collection.delete(where={"paper_id": paper_id})
+            return {"enabled": True, "reason": f"Deleted Chroma entries for {paper_id}."}
+        except Exception as exc:
+            logger.warning("Failed to delete Chroma chunks for %s: %s", paper_id, exc)
+            return {"enabled": False, "reason": f"Failed to delete Chroma entries: {exc}"}
+
+    def retrieve_evidence(
+        self,
+        *,
+        project_id: str,
+        query: str,
+        chunks: list[PaperChunk],
+        evidence_type: str,
+        paper_id: str | None = None,
+        top_k: int = 5,
+    ):
+        """Skill-oriented retrieval entry for field completion, comparison support, and gap validation evidence."""
+
+        normalized_evidence_type = self._normalize_evidence_type(evidence_type)
+        _ = normalized_evidence_type
+        return self.query_chunks(
+            project_id=project_id,
+            query=query,
+            chunks=chunks,
+            paper_id=paper_id,
+            top_k=top_k,
+        )
+
+    @classmethod
+    def _normalize_evidence_type(cls, evidence_type: str) -> str:
+        return cls.EVIDENCE_TYPE_ALIASES.get(evidence_type, evidence_type or "support")
 
     def _build_client(self):
         if Settings is not None:
@@ -80,13 +132,17 @@ class VectorStoreService:
         if not filtered_chunks:
             return []
 
+        allowed_paper_ids = {chunk.paper_id for chunk in filtered_chunks}
+
         if self.enable_chroma and chromadb is not None:
             try:
                 client = self._build_client()
-                collection = client.get_collection(name=f"project_{project_id}")
+                collection = client.get_collection(name=self.collection_name)
                 query_embedding = self.embedding_service.embed_texts([query])[0]
-                where = {"paper_id": paper_id} if paper_id else None
-                result = collection.query(query_embeddings=[query_embedding], n_results=top_k, where=where)
+                query_kwargs = {"query_embeddings": [query_embedding], "n_results": max(top_k * 6, top_k)}
+                if paper_id:
+                    query_kwargs["where"] = {"paper_id": paper_id}
+                result = collection.query(**query_kwargs)
                 evidence_items: list[EvidenceSnippet] = []
                 ids = result.get("ids", [[]])[0]
                 docs = result.get("documents", [[]])[0]
@@ -94,10 +150,13 @@ class VectorStoreService:
                 distances = result.get("distances", [[]])[0] if result.get("distances") else [0.0] * len(ids)
                 for index, chunk_id in enumerate(ids):
                     metadata = metadatas[index] or {}
+                    candidate_paper_id = metadata.get("paper_id", paper_id or "")
+                    if candidate_paper_id not in allowed_paper_ids:
+                        continue
                     score = max(0.0, 1.0 - float(distances[index] or 0.0)) if index < len(distances) else 0.0
                     evidence_items.append(
                         EvidenceSnippet(
-                            paper_id=metadata.get("paper_id", paper_id or ""),
+                            paper_id=candidate_paper_id,
                             chunk_id=chunk_id,
                             section=metadata.get("section", "unknown"),
                             page_start=int(metadata.get("page_start", 0)),
@@ -106,7 +165,10 @@ class VectorStoreService:
                             score=score,
                         )
                     )
-                return evidence_items
+                    if len(evidence_items) >= top_k:
+                        break
+                if evidence_items:
+                    return evidence_items
             except Exception as exc:
                 logger.warning("Chroma retrieval failed, falling back to lexical search: %s", exc)
 

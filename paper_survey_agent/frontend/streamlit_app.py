@@ -6,67 +6,66 @@ import re
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="多论文分析与研究空白验证平台", layout="wide")
+st.set_page_config(page_title="\u79d1\u7814\u6587\u732e\u591a\u7bc7\u6bd4\u8f83\u4e0e\u7814\u7a76\u7a7a\u767d\u5206\u6790\u5e73\u53f0", layout="wide")
 
 TARGET_TYPE_LABELS = {
-    "组会汇报": "meeting_outline",
-    "论文综述": "survey",
-    "研究空白分析": "gap_analysis",
+    "\u7ec4\u4f1a\u6c47\u62a5": "meeting_outline",
+    "\u8bba\u6587\u7efc\u8ff0": "survey",
+    "\u7814\u7a76\u7a7a\u767d\u5206\u6790": "gap_analysis",
 }
+REVERSE_TARGET_TYPE_LABELS = {value: key for key, value in TARGET_TYPE_LABELS.items()}
+
+GAP_VALIDATION_LEVEL_LABELS = {"\u8f7b\u91cf\u9a8c\u8bc1": "light", "\u4e25\u683c\u9a8c\u8bc1": "strict", "\u5173\u95ed\u9a8c\u8bc1": "off"}
+REVERSE_GAP_VALIDATION_LEVEL_LABELS = {value: key for key, value in GAP_VALIDATION_LEVEL_LABELS.items()}
 
 EXPORT_TYPE_LABELS = {
-    "论文综述": "survey",
-    "组会汇报": "meeting_outline",
-    "研究空白分析": "gap_analysis",
-    "对比表": "compare_table",
+    "\u8bba\u6587\u7efc\u8ff0": "survey",
+    "\u7ec4\u4f1a\u6c47\u62a5": "meeting_outline",
+    "\u7814\u7a76\u7a7a\u767d\u5206\u6790": "gap_analysis",
+    "\u5bf9\u6bd4\u8868": "compare_table",
 }
 
 FIELD_LABELS = {
-    "datasets": "数据集",
-    "metrics": "评测指标",
-    "limitations": "局限性",
-    "future_work": "未来工作",
+    "datasets": "\u6570\u636e\u96c6",
+    "metrics": "\u8bc4\u6d4b\u6307\u6807",
+    "limitations": "\u5c40\u9650\u6027",
+    "future_work": "\u672a\u6765\u5de5\u4f5c",
 }
 
+FOCUS_DIMENSION_OPTIONS = {
+    "\u65b9\u6cd5\u8bbe\u8ba1": "methods",
+    "\u6570\u636e\u96c6": "datasets",
+    "\u8bc4\u6d4b\u6307\u6807": "metrics",
+    "\u5c40\u9650\u6027": "limitations",
+    "\u672a\u6765\u5de5\u4f5c": "future_work",
+    "\u7814\u7a76\u7a7a\u767d": "research_gap",
+    "\u6548\u7387\u4e0e\u6210\u672c": "efficiency",
+}
+REVERSE_FOCUS_DIMENSION_OPTIONS = {value: key for key, value in FOCUS_DIMENSION_OPTIONS.items()}
 
-@st.cache_data(show_spinner=False)
+
 def app_style() -> str:
     return """
     <style>
     :root {
         --bg: linear-gradient(135deg, #f7f1e7 0%, #edf3fb 52%, #f8fbff 100%);
-        --panel: rgba(255, 255, 255, 0.82);
+        --panel: rgba(255, 255, 255, 0.84);
         --stroke: rgba(23, 50, 77, 0.10);
         --ink: #18324c;
         --muted: #607287;
     }
-    .stApp {
-        background: var(--bg);
-    }
-    .block-container {
-        max-width: 1260px;
-        padding-top: 1.6rem;
-        padding-bottom: 3rem;
-    }
+    .stApp { background: var(--bg); }
+    .block-container { max-width: 1260px; padding-top: 1.6rem; padding-bottom: 3rem; }
     .hero {
-        padding: 2rem 2.2rem;
+        padding: 1.9rem 2.1rem;
         border-radius: 28px;
         background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,247,241,0.92));
         border: 1px solid var(--stroke);
-        box-shadow: 0 20px 48px rgba(27, 44, 67, 0.08);
+        box-shadow: 0 18px 40px rgba(27, 44, 67, 0.08);
         margin-bottom: 1rem;
     }
-    .hero h1 {
-        color: var(--ink);
-        font-size: 2.15rem;
-        margin-bottom: 0.35rem;
-        letter-spacing: 0.02em;
-    }
-    .hero p {
-        color: var(--muted);
-        line-height: 1.8;
-        margin: 0;
-    }
+    .hero h1 { color: var(--ink); font-size: 2.08rem; margin-bottom: 0.4rem; }
+    .hero p { color: var(--muted); line-height: 1.75; margin: 0; }
     .metric-card {
         padding: 1rem 1.15rem;
         background: var(--panel);
@@ -75,17 +74,8 @@ def app_style() -> str:
         box-shadow: 0 10px 30px rgba(33, 49, 72, 0.06);
         min-height: 108px;
     }
-    .metric-card .label {
-        color: var(--muted);
-        font-size: 0.92rem;
-    }
-    .metric-card .value {
-        margin-top: 0.35rem;
-        color: var(--ink);
-        font-size: 1.45rem;
-        font-weight: 700;
-        word-break: break-word;
-    }
+    .metric-card .label { color: var(--muted); font-size: 0.92rem; }
+    .metric-card .value { margin-top: 0.35rem; color: var(--ink); font-size: 1.45rem; font-weight: 700; word-break: break-word; }
     .section-card {
         background: rgba(255,255,255,0.88);
         border-radius: 24px;
@@ -94,17 +84,8 @@ def app_style() -> str:
         box-shadow: 0 10px 28px rgba(35, 48, 69, 0.05);
         margin-bottom: 1rem;
     }
-    .section-card h3 {
-        color: var(--ink);
-        margin: 0 0 0.45rem 0;
-        font-size: 1.08rem;
-    }
-    .section-card p {
-        color: var(--muted);
-        margin: 0;
-        line-height: 1.75;
-        font-size: 0.94rem;
-    }
+    .section-card h3 { color: var(--ink); margin: 0 0 0.45rem 0; font-size: 1.08rem; }
+    .section-card p { color: var(--muted); margin: 0; line-height: 1.75; font-size: 0.94rem; }
     .paper-card {
         padding: 1rem;
         border-radius: 20px;
@@ -113,15 +94,8 @@ def app_style() -> str:
         box-shadow: 0 8px 22px rgba(38, 52, 74, 0.05);
         margin-bottom: 1rem;
     }
-    .paper-card h4 {
-        margin: 0 0 0.3rem 0;
-        color: var(--ink);
-    }
-    .paper-meta {
-        color: var(--muted);
-        font-size: 0.9rem;
-        margin-bottom: 0.7rem;
-    }
+    .paper-card h4 { margin: 0 0 0.3rem 0; color: var(--ink); }
+    .paper-meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.7rem; }
     div[data-testid="stTextArea"] textarea {
         border-radius: 16px !important;
         background: rgba(248, 250, 252, 0.98) !important;
@@ -136,19 +110,14 @@ def app_style() -> str:
         background: rgba(255,255,255,0.92);
         box-shadow: 0 10px 28px rgba(35, 49, 70, 0.05);
     }
-    .compare-table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
-    }
+    .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .compare-table col.title { width: 16%; }
     .compare-table col.problem { width: 22%; }
     .compare-table col.method { width: 22%; }
     .compare-table col.datasets { width: 12%; }
     .compare-table col.metrics { width: 10%; }
     .compare-table col.limitations { width: 18%; }
-    .compare-table th,
-    .compare-table td {
+    .compare-table th, .compare-table td {
         padding: 14px 12px;
         border-bottom: 1px solid rgba(23, 50, 77, 0.08);
         vertical-align: top;
@@ -167,11 +136,7 @@ def app_style() -> str:
         top: 0;
         z-index: 1;
     }
-    .cell-scroll {
-        max-height: 180px;
-        overflow-y: auto;
-        padding-right: 4px;
-    }
+    .cell-scroll { max-height: 180px; overflow-y: auto; padding-right: 4px; }
     </style>
     """
 
@@ -179,9 +144,13 @@ def app_style() -> str:
 def init_state() -> None:
     defaults = {
         "project_id": "",
-        "project_name": "多论文分析与研究空白验证平台",
-        "topic": "围绕多篇论文的结构化抽取、横向对比、字段补全与研究空白验证。",
+        "project_name": "\u79d1\u7814\u6587\u732e\u591a\u7bc7\u6bd4\u8f83\u4e0e\u7814\u7a76\u7a7a\u767d\u5206\u6790\u5e73\u53f0",
+        "topic": "\u56f4\u7ed5\u591a\u7bc7\u8bba\u6587\u7684\u7ed3\u6784\u5316\u62bd\u53d6\u3001\u6a2a\u5411\u5bf9\u6bd4\u3001\u5b57\u6bb5\u8865\u5168\u4e0e\u7814\u7a76\u7a7a\u767d\u9a8c\u8bc1\u3002",
         "target_type": "meeting_outline",
+        "focus_dimensions": ["methods", "research_gap"],
+        "user_requirements": "",
+        "gap_validation_level": "light",
+        "projects": [],
         "papers": [],
         "compare_result": None,
         "field_completions": [],
@@ -192,12 +161,13 @@ def init_state() -> None:
 
 
 init_state()
+st.session_state.setdefault("focus_dimensions", ["methods", "research_gap"])
+st.session_state.setdefault("user_requirements", "")
+st.session_state.setdefault("gap_validation_level", "light")
 st.markdown(app_style(), unsafe_allow_html=True)
 
 
 def normalize_display_text(value: str) -> str:
-    """Lightly clean PDF spacing artifacts for UI display."""
-
     if not value:
         return ""
     text = str(value).replace("\u00ad", "")
@@ -243,6 +213,32 @@ def clear_project_cache() -> None:
     st.session_state.gaps = []
 
 
+
+def apply_project_summary(summary: dict) -> None:
+    st.session_state.project_id = summary.get("project_id", "")
+    st.session_state.project_name = summary.get("project_name", st.session_state.project_name)
+    st.session_state.topic = summary.get("topic", st.session_state.topic)
+    st.session_state.target_type = summary.get("target_type", st.session_state.target_type)
+    st.session_state.focus_dimensions = summary.get("focus_dimensions", st.session_state.focus_dimensions)
+    st.session_state.user_requirements = summary.get("user_requirements", st.session_state.user_requirements)
+    st.session_state.gap_validation_level = summary.get("gap_validation_level", st.session_state.gap_validation_level)
+
+
+
+def find_project_summary(project_id: str) -> dict | None:
+    return next((item for item in st.session_state.projects if item.get("project_id") == project_id), None)
+
+
+
+def refresh_project_catalog(show_notice: bool = False) -> None:
+    data = call_api("GET", f"{BACKEND_URL}/api/projects", timeout=45, show_error=False)
+    if data is not None:
+        st.session_state.projects = data.get("projects", [])
+        if show_notice:
+            st.success("项目列表已刷新。")
+
+
+
 def refresh_project_snapshot(show_notice: bool = False) -> None:
     project_id = st.session_state.project_id
     if not project_id:
@@ -263,6 +259,17 @@ def refresh_project_snapshot(show_notice: bool = False) -> None:
         st.session_state.gaps = gaps.get("gaps", [])
     if show_notice:
         st.success("当前项目数据已同步。")
+
+
+refresh_project_catalog()
+if st.session_state.projects and not st.session_state.project_id:
+    apply_project_summary(st.session_state.projects[0])
+    refresh_project_snapshot()
+elif st.session_state.project_id:
+    summary = find_project_summary(st.session_state.project_id)
+    if summary is not None:
+        apply_project_summary(summary)
+
 
 
 def render_compare_table(rows: list[dict]) -> None:
@@ -304,7 +311,7 @@ st.markdown(
     """
     <div class="hero">
       <h1>多论文分析与研究空白验证平台</h1>
-      <p>面向科研场景的多论文分析系统。支持 PDF 上传、结构化抽取、字段补全、跨论文对比、研究空白验证与结果导出。主流程默认不做翻译，先稳定展示原始结果；如需统一中文展示，可手动点击“翻译当前项目结果”。</p>
+      <p>面向科研场景的多论文分析系统。支持项目创建、历史项目切换、PDF 上传、结构化抽取、字段补全、跨论文对比、研究空白验证与结果导出。系统已支持全局论文复用：同一篇 PDF 在不同项目中不会重复入库，删除项目时会按引用关系决定是否清理论文资产和向量索引。</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -313,12 +320,12 @@ st.markdown(
 metric_col1, metric_col2, metric_col3 = st.columns(3)
 with metric_col1:
     st.markdown(
-        f"<div class='metric-card'><div class='label'>当前项目</div><div class='value'>{st.session_state.project_id or '未创建'}</div></div>",
+        f"<div class='metric-card'><div class='label'>当前项目</div><div class='value'>{st.session_state.project_id or '未选择'}</div></div>",
         unsafe_allow_html=True,
     )
 with metric_col2:
     st.markdown(
-        f"<div class='metric-card'><div class='label'>论文数量</div><div class='value'>{len(st.session_state.papers)}</div></div>",
+        f"<div class='metric-card'><div class='label'>项目内论文数</div><div class='value'>{len(st.session_state.papers)}</div></div>",
         unsafe_allow_html=True,
     )
 with metric_col3:
@@ -328,8 +335,53 @@ with metric_col3:
     )
 
 with st.sidebar:
+    st.markdown("### 项目管理")
+    if st.button("刷新项目列表", use_container_width=True):
+        refresh_project_catalog(show_notice=True)
+
+    projects = st.session_state.projects
+    if projects:
+        project_options = {f"{item['project_name']} · {item['paper_count']}篇": item for item in projects}
+        project_labels = list(project_options.keys())
+        current_index = 0
+        for index, item in enumerate(projects):
+            if item.get("project_id") == st.session_state.project_id:
+                current_index = index
+                break
+        selected_label = st.selectbox("历史项目", project_labels, index=current_index)
+        selected_summary = project_options[selected_label]
+        if st.button("切换到所选项目", use_container_width=True):
+            apply_project_summary(selected_summary)
+            clear_project_cache()
+            refresh_project_snapshot(show_notice=True)
+    else:
+        st.caption("当前还没有历史项目。")
+
+    confirm_delete = st.checkbox("确认删除当前项目", value=False, disabled=not st.session_state.project_id)
+    if st.button("删除当前项目", use_container_width=True, disabled=not st.session_state.project_id or not confirm_delete):
+        deleted = call_api("DELETE", f"{BACKEND_URL}/api/projects/{st.session_state.project_id}", timeout=120)
+        if deleted is not None:
+            removed_id = st.session_state.project_id
+            clear_project_cache()
+            st.session_state.project_id = ""
+            st.session_state.project_name = "多论文分析与研究空白验证平台"
+            st.session_state.topic = "围绕多篇论文的结构化抽取、横向对比、字段补全与研究空白验证。"
+            st.session_state.target_type = "meeting_outline"
+            st.session_state.focus_dimensions = ["methods", "research_gap"]
+            st.session_state.user_requirements = ""
+            st.session_state.gap_validation_level = "light"
+            refresh_project_catalog()
+            if st.session_state.projects:
+                apply_project_summary(st.session_state.projects[0])
+                refresh_project_snapshot()
+            st.success(f"项目 {removed_id} 已删除。")
+
     st.markdown("### 当前项目")
-    st.write(f"项目 ID：`{st.session_state.project_id or '未创建'}`")
+    st.write(f"项目 ID：`{st.session_state.project_id or '未选择'}`")
+    current_summary = find_project_summary(st.session_state.project_id) if st.session_state.project_id else None
+    if current_summary is not None:
+        st.caption(f"项目内论文数：{current_summary.get('paper_count', 0)}")
+
     if st.button("同步当前项目数据", use_container_width=True, disabled=not st.session_state.project_id):
         refresh_project_snapshot(show_notice=True)
     if st.button("翻译当前项目结果", use_container_width=True, disabled=not st.session_state.project_id):
@@ -342,21 +394,51 @@ with st.sidebar:
             st.session_state.papers = translated.get("translated_papers", [])
             refresh_project_snapshot()
             st.success("当前项目结果已尝试翻译，页面内容已更新。")
-    st.caption("主流程先稳定生成结果。需要统一中文展示时，再单独点翻译按钮。")
+    st.caption("主流程默认不翻译。需要统一中文时，再单独点击翻译按钮。")
 
 project_tab, upload_tab, papers_tab, compare_tab, completion_tab, gap_tab, review_tab, export_tab = st.tabs(
     ["项目创建", "论文上传与分析", "论文卡片", "多篇对比", "字段补全", "Gap 验证", "人工确认", "导出结果"]
 )
 
 with project_tab:
-    st.markdown(
-        "<div class='section-card'><h3>新建分析项目</h3><p>建议一个项目对应一组主题接近的论文。这样上传两三篇论文后，后续对比、字段补全和 Gap 验证都会在同一项目内集中展示。</p></div>",
-        unsafe_allow_html=True,
+    st.subheader("\u65b0\u5efa\u5206\u6790\u9879\u76ee")
+    project_name = st.text_input("\u9879\u76ee\u540d\u79f0", value=st.session_state.project_name)
+    topic = st.text_area("\u7814\u7a76\u4e3b\u9898\u8bf4\u660e", value=st.session_state.topic, height=110)
+    target_labels = list(TARGET_TYPE_LABELS.keys())
+    default_label = REVERSE_TARGET_TYPE_LABELS.get(st.session_state.target_type, "\u7ec4\u4f1a\u6c47\u62a5")
+    target_type_label = st.selectbox("\u8f93\u51fa\u76ee\u6807", target_labels, index=target_labels.index(default_label))
+    target_type_value = TARGET_TYPE_LABELS[target_type_label]
+    recommended_gap_level = "strict" if target_type_value == "gap_analysis" else "light"
+    current_gap_level = st.session_state.gap_validation_level or recommended_gap_level
+    if current_gap_level not in REVERSE_GAP_VALIDATION_LEVEL_LABELS:
+        current_gap_level = recommended_gap_level
+    gap_level_label = st.selectbox(
+        "Gap \u9a8c\u8bc1\u5f3a\u5ea6",
+        list(GAP_VALIDATION_LEVEL_LABELS.keys()),
+        index=list(GAP_VALIDATION_LEVEL_LABELS.keys()).index(REVERSE_GAP_VALIDATION_LEVEL_LABELS.get(current_gap_level, REVERSE_GAP_VALIDATION_LEVEL_LABELS[recommended_gap_level])),
+        help="\u7efc\u8ff0\u548c\u7ec4\u4f1a\u6c47\u62a5\u9ed8\u8ba4\u4f7f\u7528\u8f7b\u91cf\u9a8c\u8bc1\uff0c\u7814\u7a76\u7a7a\u767d\u5206\u6790\u9ed8\u8ba4\u4f7f\u7528\u4e25\u683c\u9a8c\u8bc1\uff1b\u4f60\u4e5f\u53ef\u4ee5\u624b\u52a8\u8986\u76d6\u3002",
     )
-    project_name = st.text_input("项目名称", value=st.session_state.project_name)
-    topic = st.text_area("研究主题说明", value=st.session_state.topic, height=110)
-    target_type_label = st.selectbox("输出目标", list(TARGET_TYPE_LABELS.keys()), index=0)
-    if st.button("创建项目", use_container_width=True):
+
+    default_focus_labels = [
+        REVERSE_FOCUS_DIMENSION_OPTIONS[item]
+        for item in st.session_state.focus_dimensions
+        if item in REVERSE_FOCUS_DIMENSION_OPTIONS
+    ]
+    selected_focus_labels = st.multiselect(
+        "\u91cd\u70b9\u5173\u6ce8",
+        list(FOCUS_DIMENSION_OPTIONS.keys()),
+        default=default_focus_labels,
+        help="\u7cfb\u7edf\u4f1a\u5728\u591a\u7bc7\u5bf9\u6bd4\u3001Research Gap \u5019\u9009\u548c\u5bfc\u51fa\u7ed3\u679c\u4e2d\u4f18\u5148\u5f3a\u8c03\u8fd9\u4e9b\u7ef4\u5ea6\u3002",
+    )
+    user_requirements = st.text_area(
+        "\u7528\u6237\u989d\u5916\u8981\u6c42",
+        value=st.session_state.user_requirements,
+        height=90,
+        placeholder="\u4f8b\u5982\uff1a\u66f4\u5173\u6ce8\u6cdb\u5316\u80fd\u529b\u3001\u8de8\u6570\u636e\u96c6\u8868\u73b0\u548c\u90e8\u7f72\u53ef\u884c\u6027\u3002",
+    )
+
+    if st.button("\u521b\u5efa\u9879\u76ee", use_container_width=True):
+        focus_dimensions = [FOCUS_DIMENSION_OPTIONS[label] for label in selected_focus_labels]
         data = call_api(
             "POST",
             f"{BACKEND_URL}/api/projects",
@@ -364,6 +446,9 @@ with project_tab:
                 "project_name": project_name,
                 "topic": topic,
                 "target_type": TARGET_TYPE_LABELS[target_type_label],
+                "focus_dimensions": focus_dimensions,
+                "user_requirements": user_requirements,
+                "gap_validation_level": GAP_VALIDATION_LEVEL_LABELS[gap_level_label],
             },
             timeout=30,
         )
@@ -372,12 +457,16 @@ with project_tab:
             st.session_state.project_name = project_name
             st.session_state.topic = topic
             st.session_state.target_type = TARGET_TYPE_LABELS[target_type_label]
+            st.session_state.focus_dimensions = focus_dimensions
+            st.session_state.user_requirements = user_requirements
+            st.session_state.gap_validation_level = GAP_VALIDATION_LEVEL_LABELS[gap_level_label]
             clear_project_cache()
-            st.success(f"项目已创建：{st.session_state.project_id}")
+            refresh_project_catalog()
+            st.success(f"\u9879\u76ee\u5df2\u521b\u5efa\uff1a{st.session_state.project_id}")
 
 with upload_tab:
     st.markdown(
-        "<div class='section-card'><h3>上传论文并启动分析</h3><p>先点“上传论文”，再点“开始分析”。上传成功后不会自动触发翻译，分析完成后会自动同步一次结果页面。</p></div>",
+        "<div class='section-card'><h3>上传论文并启动分析</h3><p>上传时会先做全局去重，再把论文关联到当前项目。也就是说，同一篇论文跨项目复用时不会重复存 PDF、chunk 和向量。</p></div>",
         unsafe_allow_html=True,
     )
     uploaded_files = st.file_uploader("选择多篇 PDF 论文", type=["pdf"], accept_multiple_files=True)
@@ -390,35 +479,49 @@ with upload_tab:
                 "POST",
                 f"{BACKEND_URL}/api/projects/{st.session_state.project_id}/papers/upload",
                 files=files,
-                timeout=180,
+                timeout=240,
             )
             if data:
                 clear_project_cache()
-                st.success(f"上传成功，共 {len(data.get('paper_ids', []))} 篇论文。现在可以直接点击“开始分析”。")
+                refresh_project_catalog()
+                new_count = len(data.get("newly_stored_paper_ids", []))
+                reused_count = len(data.get("reused_paper_ids", []))
+                linked_count = len(data.get("paper_ids", []))
+                st.success(f"上传完成：新增入库 {new_count} 篇，复用已有论文 {reused_count} 篇，当前项目新增关联 {linked_count} 篇。")
 
     option_col1, option_col2 = st.columns(2)
     with option_col1:
-        enable_gap_analysis = st.checkbox("启用研究空白验证", value=True)
+        run_recommended_gap_level = "strict" if st.session_state.target_type == "gap_analysis" else "light"
+        run_current_gap_level = st.session_state.get("gap_validation_level", run_recommended_gap_level) or run_recommended_gap_level
+        if run_current_gap_level not in REVERSE_GAP_VALIDATION_LEVEL_LABELS:
+            run_current_gap_level = run_recommended_gap_level
+        run_gap_level_label = st.selectbox(
+            "本次分析的 Gap 验证强度",
+            list(GAP_VALIDATION_LEVEL_LABELS.keys()),
+            index=list(GAP_VALIDATION_LEVEL_LABELS.keys()).index(REVERSE_GAP_VALIDATION_LEVEL_LABELS.get(run_current_gap_level, REVERSE_GAP_VALIDATION_LEVEL_LABELS[run_recommended_gap_level])),
+            help="三类任务都会生成 gap candidates；这里控制的是本次运行采用 off / light / strict 哪一级验证。",
+        )
     with option_col2:
         enable_external_search = st.checkbox("允许外部补充检索", value=False)
-
     if st.button("开始分析", disabled=not st.session_state.project_id, use_container_width=True):
         data = call_api(
             "POST",
             f"{BACKEND_URL}/api/projects/{st.session_state.project_id}/analyze",
             json={
-                "enable_gap_analysis": enable_gap_analysis,
+                "gap_validation_level": GAP_VALIDATION_LEVEL_LABELS[run_gap_level_label],
                 "enable_external_search": enable_external_search,
             },
             timeout=1800,
         )
         if data:
+            st.session_state.gap_validation_level = GAP_VALIDATION_LEVEL_LABELS[run_gap_level_label]
             refresh_project_snapshot()
+            refresh_project_catalog()
             st.success("分析流程已完成，页面结果已更新。")
 
 with papers_tab:
     st.markdown(
-        "<div class='section-card'><h3>论文结构化卡片</h3><p>这里展示当前项目下每篇论文的结构化结果。页面先稳定展示英文或中英混合内容；如果需要统一中文，可在左侧点击“翻译当前项目结果”。</p></div>",
+        "<div class='section-card'><h3>论文结构化卡片</h3><p>这里展示当前项目下每篇论文的统一结构化结果。翻译不是主流程必经步骤，因此默认先显示原始语言；如果要统一中文，再点击左侧翻译按钮。</p></div>",
         unsafe_allow_html=True,
     )
     if not st.session_state.papers:
@@ -443,7 +546,7 @@ with papers_tab:
 
 with compare_tab:
     st.markdown(
-        "<div class='section-card'><h3>多篇论文横向对比</h3><p>这里保留横向表格形式，但单元格内容会自动换行，且内部有固定高度和滚动区域，不会再被一条超长局限性把整页撑满。</p></div>",
+        "<div class='section-card'><h3>多篇论文横向对比</h3><p>这里保留横向表格形式。单元格固定高度、内部滚动，适合直接查看长段落而不会把整页撑满。</p></div>",
         unsafe_allow_html=True,
     )
     compare_result = st.session_state.compare_result
@@ -455,7 +558,7 @@ with compare_tab:
 
 with completion_tab:
     st.markdown(
-        "<div class='section-card'><h3>字段补全结果</h3><p>这里展示字段补全前后差异、检索查询和证据片段。需要人工确认的条目会同时出现在人工确认页。</p></div>",
+        "<div class='section-card'><h3>字段补全结果</h3><p>这里展示字段补全前后结果、检索查询与证据片段。项目删除时，这些项目级记录会一起删除；但若论文还被其他项目引用，其论文向量不会被误删。</p></div>",
         unsafe_allow_html=True,
     )
     if not st.session_state.field_completions:
@@ -612,16 +715,15 @@ with export_tab:
         "<div class='section-card'><h3>导出结果</h3><p>默认会沿用项目创建时选择的输出目标。只有当你这一次想临时换一个导出类型时，才需要手动切换。</p></div>",
         unsafe_allow_html=True,
     )
-    reverse_target_labels = {value: key for key, value in TARGET_TYPE_LABELS.items()}
     current_target_type = st.session_state.get("target_type", "meeting_outline")
-    current_target_label = reverse_target_labels.get(current_target_type, "组会汇报")
+    current_target_label = REVERSE_TARGET_TYPE_LABELS.get(current_target_type, "组会汇报")
     st.info(f"当前项目默认导出目标：{current_target_label}")
 
     use_custom_export = st.checkbox("临时切换导出类型", value=False)
     export_type = current_target_type
     if use_custom_export:
-        default_label = reverse_target_labels.get(current_target_type, "组会汇报")
         export_labels = list(EXPORT_TYPE_LABELS.keys())
+        default_label = REVERSE_TARGET_TYPE_LABELS.get(current_target_type, "组会汇报")
         default_index = export_labels.index(default_label) if default_label in export_labels else 1
         export_type_label = st.selectbox("导出类型", export_labels, index=default_index)
         export_type = EXPORT_TYPE_LABELS[export_type_label]
@@ -638,3 +740,7 @@ with export_tab:
             export_data = data["export"]
             st.success(f"已导出到：{export_data['file_path']}")
             st.text_area("导出内容预览", value=normalize_display_text(export_data.get("content") or ""), height=320, key="export_preview")
+
+
+
+

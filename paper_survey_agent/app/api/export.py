@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -28,7 +28,12 @@ def export_project(
 
     try:
         paper_schemas = crud.list_project_schemas(db, project_id)
-        compare_result = compare_service.build_compare_result(paper_schemas, topic=project.topic)
+        compare_result = compare_service.build_compare_result(
+            paper_schemas,
+            topic=project.topic,
+            focus_dimensions=project.focus_dimensions or [],
+            user_requirements=project.user_requirements or "",
+        )
         gaps = crud.list_project_gaps(db, project_id)
         export_payload = export_service.export(
             project_id=project_id,
@@ -37,6 +42,8 @@ def export_project(
             paper_schemas=paper_schemas,
             compare_result=compare_result,
             gap_candidates=gaps,
+            focus_dimensions=project.focus_dimensions or [],
+            user_requirements=project.user_requirements or "",
         )
         return ExportResponse(export=export_payload)
     except Exception as exc:

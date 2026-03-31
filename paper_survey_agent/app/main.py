@@ -8,8 +8,7 @@ from app.api.export import router as export_router
 from app.api.gaps import router as gaps_router
 from app.api.papers import router as papers_router
 from app.api.projects import router as projects_router
-from app.db.models import Base
-from app.db.session import engine
+from app.db.session import initialize_database
 from app.utils.file_utils import ensure_app_directories
 
 app = FastAPI(title="Paper Survey Agent", version="0.1.0")
@@ -28,7 +27,7 @@ def on_startup() -> None:
     """Initialize directories and database tables."""
 
     ensure_app_directories()
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
 
 
 @app.get("/health")

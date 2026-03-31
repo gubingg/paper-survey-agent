@@ -1,5 +1,6 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -11,6 +12,7 @@ from app.schemas.paper_schema import CompareResult, ExportPayload, PaperSchema
 
 TargetType = Literal["survey", "meeting_outline", "gap_analysis"]
 ExportType = Literal["survey", "meeting_outline", "gap_analysis", "compare_table", "related_work_markdown"]
+GapValidationLevel = Literal["off", "light", "strict"]
 
 
 class CreateProjectRequest(BaseModel):
@@ -19,6 +21,9 @@ class CreateProjectRequest(BaseModel):
     project_name: str
     topic: str
     target_type: TargetType = "meeting_outline"
+    focus_dimensions: list[str] = Field(default_factory=list)
+    user_requirements: str = ""
+    gap_validation_level: GapValidationLevel | None = None
 
 
 class CreateProjectResponse(BaseModel):
@@ -27,17 +32,48 @@ class CreateProjectResponse(BaseModel):
     project_id: str
 
 
+class ProjectSummary(BaseModel):
+    """One lightweight project summary for project management UI."""
+
+    project_id: str
+    project_name: str
+    topic: str
+    target_type: TargetType
+    focus_dimensions: list[str] = Field(default_factory=list)
+    user_requirements: str = ""
+    gap_validation_level: GapValidationLevel = "light"
+    created_at: datetime
+    paper_count: int = 0
+
+
+class ProjectListResponse(BaseModel):
+    """List of available projects."""
+
+    projects: list[ProjectSummary] = Field(default_factory=list)
+
+
+class DeleteProjectResponse(BaseModel):
+    """Deletion summary after removing a project."""
+
+    project_id: str
+    deleted: bool = True
+    deleted_paper_ids: list[str] = Field(default_factory=list)
+    retained_shared_paper_ids: list[str] = Field(default_factory=list)
+
+
 class UploadPapersResponse(BaseModel):
     """Response after PDFs are uploaded."""
 
     paper_ids: list[str] = Field(default_factory=list)
     file_paths: list[str] = Field(default_factory=list)
+    reused_paper_ids: list[str] = Field(default_factory=list)
+    newly_stored_paper_ids: list[str] = Field(default_factory=list)
 
 
 class AnalyzeProjectRequest(BaseModel):
     """Request body for analysis workflow execution."""
 
-    enable_gap_analysis: bool = True
+    gap_validation_level: GapValidationLevel | None = None
     enable_external_search: bool = False
 
 
