@@ -39,7 +39,7 @@
 - 人工确认字段补全与 gap 候选
 - 按任务类型导出 `survey / meeting_outline / gap_analysis / compare_table`
 - 历史项目切换、项目删除、全局论文复用
-- 删除项目时按引用关系清理孤儿论文资产和对应 Chroma 索引
+- 删除项目时按引用关系清理不再被任何项目使用的论文文件、解析结果和对应 Chroma 索引
 
 说明：
 
@@ -163,9 +163,9 @@ create project
 
 即使 `survey` 或 `meeting_outline` 使用 `strict` 验证，输出风格仍保持各自任务导向，不会被写成 `gap_analysis` 报告。
 
-## 用户额外要求
+补充说明：
 
-首页的“用户额外要求”已经接入系统主流程，而且现在不再只是展示字段。
+首页的“用户额外要求”已经接入系统主流程，但它更适合被理解为任务偏好，而不是单独的一类能力。
 
 当前行为：
 
@@ -173,6 +173,7 @@ create project
 - 分析 workflow 会把它带入 `MainWorkflowState`
 - `compare-papers` 阶段在配置在线模型时，会让 LLM 理解这条要求并调整比较重点
 - `generate-output` 阶段在配置在线模型时，会让 LLM 结合 `task_type` 和这条要求组织最终内容
+
 当前边界：
 
 - 不进入 `extract-fields`
@@ -192,7 +193,7 @@ create project
 删除项目时：
 
 - 总是删除该项目自己的任务、gap、字段补全结果和项目关联记录
-- 仅当某篇论文不再被任何其他项目引用时，才会继续删除：
+- 仅当某篇论文不再被任何其他项目使用时，才会继续删除：
   - 论文数据库记录
   - chunk
   - schema
