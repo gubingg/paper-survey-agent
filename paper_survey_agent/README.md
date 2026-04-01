@@ -17,9 +17,9 @@
 
 <p align="center">
   <img src="images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
-  <img src="images/ui-review.png" width="48%" alt="人工确认与审核页" />
+  <img src="images/gap.png" width="48%" alt="Gap验证页" />
 </p>
-<p align="center"><em>横向对比页与人工确认页</em></p>
+<p align="center"><em>横向对比页与Gap验证页</em></p>
 
 <p align="center">
   <img src="images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
@@ -173,7 +173,6 @@ create project
 - 分析 workflow 会把它带入 `MainWorkflowState`
 - `compare-papers` 阶段在配置在线模型时，会让 LLM 理解这条要求并调整比较重点
 - `generate-output` 阶段在配置在线模型时，会让 LLM 结合 `task_type` 和这条要求组织最终内容
-
 当前边界：
 
 - 不进入 `extract-fields`

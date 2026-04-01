@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import html
+import os
 import re
 
 import requests
@@ -203,7 +204,7 @@ def call_api(method: str, url: str, *, timeout: int = 60, show_error: bool = Tru
     return None
 
 
-BACKEND_URL = st.sidebar.text_input("后端地址", value="http://127.0.0.1:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 
 def clear_project_cache() -> None:
