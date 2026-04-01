@@ -1,109 +1,233 @@
 # 科研文献多篇比较与研究空白分析平台
 
-这是一个基于 `FastAPI + Streamlit + LangGraph` 的科研工作流系统，采用“固定工作流 + 两个局部智能体”的混合架构。系统面向多篇论文综述、组会汇报准备和研究空白分析，支持从 PDF 上传、结构化抽取、多篇对比，到字段补全、研究空白验证和结果导出的一整套流程。
+这是一个基于 `FastAPI + Streamlit + LangGraph` 的科研多论文分析系统。当前代码采用“固定 Workflow + RAG + Agent 子图 + skill 语义对齐”的实现方式，围绕以下 3 类核心任务工作：
+
+- `survey`
+- `meeting_outline`
+- `gap_analysis`
+
+系统支持从 PDF 上传、解析、结构化抽取、字段补全、跨论文比较，到研究空白验证、人工确认和结果导出的完整流程。
 
 ## 界面展示
 
 <p align="center">
-  <img src="paper_survey_agent/images/ui-overview.png" width="92%" alt="系统首页与论文结构化卡片" />
+  <img src="images/ui-overview.png" width="92%" alt="系统首页与论文结构化卡片" />
 </p>
 <p align="center"><em>首页总览与论文结构化卡片</em></p>
 
 <p align="center">
-  <img src="paper_survey_agent/images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
-  <img src="paper_survey_agent/images/ui-review.png" width="48%" alt="人工确认与审核页" />
+  <img src="images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
+  <img src="images/gap.png" width="48%" alt="Gap验证页" />
 </p>
-<p align="center"><em>横向对比页与人工确认页</em></p>
+<p align="center"><em>横向对比页与Gap验证页</em></p>
+
 <p align="center">
-  <img src="paper_survey_agent/images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
+  <img src="images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
 </p>
 <p align="center"><em>结果导出页</em></p>
 
-## 当前状态
+## 当前能力
 
-当前版本已经实现并稳定保留以下能力：
+当前代码已经具备以下能力：
 
-- 多篇论文 PDF 上传与解析
-- 结构化论文卡片抽取
-- 多篇论文横向对比
+- 多篇 PDF 上传、解析、切块和持久化
+- 逐篇论文结构化字段抽取
 - 字段补全子流程
-- 研究空白候选与验证结果展示
-- 人工确认页
-- 导出结果页
-- 手动翻译当前项目结果
+- 多论文横向比较
+- `gap_candidates_raw` 生成
+- `light / strict` 两级研究空白验证
+- 人工确认字段补全与 gap 候选
+- 按任务类型导出 `survey / meeting_outline / gap_analysis / compare_table`
+- 历史项目切换、项目删除、全局论文复用
+- 删除项目时按引用关系清理孤儿论文资产和对应 Chroma 索引
 
-说明：主流程默认不做翻译，页面会先稳定展示英文或中英混合结果；只有用户点击“翻译当前项目结果”按钮时，才会单独触发翻译。
+说明：
 
-## 当前架构
+- 主流程默认不做翻译，翻译是单独触发的展示层功能。
+- 若未配置在线模型，系统会回退到启发式抽取、本地检索和规则化输出，不会阻断主流程。
 
-### 主流程
+## Skill 对齐
+
+仓库内 `.agents/skills/` 已和主代码职责对齐。当前不是额外引入一套复杂的 skill runtime，而是通过现有 workflow、node 和 service 直接映射 skill 语义。
+
+### `extract-fields`
+
+职责：逐篇论文结构化字段提取，不做跨论文比较，不直接输出最终结果。
+
+代码对应：
+
+- `app/graph/nodes.py` 中的 `extract_schema_node`
+- `app/services/extraction_service.py`
+
+### `compare-papers`
+
+职责：跨论文横向比较，并基于比较结果生成 `gap_candidates_raw`。
+
+代码对应：
+
+- `app/graph/nodes.py` 中的 `compare_papers_node`
+- `app/graph/nodes.py` 中的 `generate_gap_candidates_node`
+- `app/services/compare_service.py`
+- `app/services/gap_service.py`
+
+补充说明：
+
+- 当配置 `DASHSCOPE_API_KEY` 时，`compare-papers` 会优先通过 LLM 理解论文差异和用户额外要求。
+- 未配置在线模型时，会自动回退到现有启发式比较逻辑。
+
+### `retrieve-evidence`
+
+职责：为字段补全、比较支撑和 gap 验证提供证据检索，支持 `support / counter / coverage` 语义。
+
+代码对应：
+
+- `app/services/vector_store_service.py`
+- `app/graph/field_completion_nodes.py`
+- `app/graph/gap_validation_nodes.py`
+
+### `validate-gap`
+
+职责：输入 `gap_candidates_raw`，按 `light / strict` 执行验证，输出 `validated_gap_candidates / final_gap_candidates`。
+
+代码对应：
+
+- `app/graph/nodes.py` 中的 `light_gap_validation_node`
+- `app/graph/nodes.py` 中的 `strict_gap_validation_node`
+- `app/graph/gap_validation_workflow.py`
+- `app/services/gap_validation_service.py`
+
+### `generate-output`
+
+职责：根据 `task_type` 生成最终输出。输出重点由任务类型决定，而不是由验证深度决定。
+
+代码对应：
+
+- `app/graph/nodes.py` 中的 `export_results_node`
+- `app/services/export_service.py`
+
+补充说明：
+
+- 当配置 `DASHSCOPE_API_KEY` 时，`generate-output` 会优先通过 LLM 按 `task_type` 和 `user_requirements` 组织输出。
+- 未配置在线模型时，会自动回退到规则化输出实现。
+
+## 主流程
 
 ```text
-创建项目
--> 上传多篇PDF
--> 解析文本
--> 文本切分
-   ├-> 结构化抽取 -> 论文信息卡
-   └-> 建立Chroma向量库
--> 问题字段检测 -> 字段补全智能体（基于向量库检索）
--> 多论文对比（基于论文信息卡）
--> 初步 Gap 候选生成 -> Gap 验证智能体（结合对比结果 + 检索证据）
--> 人工确认
--> 导出结果
+create project
+-> upload PDFs
+-> parse papers
+-> chunk papers
+-> extract structured fields
+-> index chunks
+-> detect problematic fields
+-> field completion subgraph
+-> compare papers
+-> generate gap_candidates_raw
+-> route by effective_validation_level
+   -> light gap validation
+   -> strict gap validation
+   -> or skip validation when level=off
+-> human review
+-> generate output
 ```
 
-### 局部智能体
+## 三类任务与验证规则
 
-1. 字段补全智能体
+三类任务都会先生成 `gap_candidates_raw`。
 
-- 触发字段：`datasets`、`metrics`、`limitations`、`future_work`
-- 处理场景：字段为空、N/A、过短、证据不足、质量可疑
-- 默认只做论文内部检索
-- 支持条件分支和有限重试
+默认验证级别：
 
-2. 研究空白验证智能体
+- `survey -> light`
+- `meeting_outline -> light`
+- `gap_analysis -> strict`
 
-- 接收初步 gap 候选
-- 检索支持证据与反证
-- 统计覆盖论文数
-- 输出四种验证结果：`成立 / 证据弱 / 有冲突 / 不成立`
-- 高风险结果进入人工确认
+如果显式传入 `gap_validation_level`，则覆盖默认规则。
 
-## 交互逻辑
+实际运行时，workflow 会显式计算并传递：
 
-### 翻译策略
+- `gap_validation_level`
+- `effective_validation_level`
 
-- 主流程不翻译
-- 结果页先稳定展示原始抽取结果
-- 用户可以在侧边栏点击“翻译当前项目结果”
-- 翻译是手动触发的展示层能力，不参与主分析链路
+也就是说，分支路由和后续输出使用的是真正生效的验证级别，而不是只看原始入参。
 
-### 导出策略
+## 输出规则
 
-- 项目创建时会选择默认输出目标：`survey / meeting_outline / gap_analysis`
-- 导出页默认沿用该目标
-- 如果只是这一次想临时切换导出类型，再手动选择即可
+最终输出严格按 `task_type` 决定重点：
+
+- `survey`
+  以综述为主，gap 作为未来方向或讨论方向的一部分。
+- `meeting_outline`
+  以汇报提纲为主，gap 作为讨论点的一部分。
+- `gap_analysis`
+  以研究空白分析为主，重点展示 `validation_result`、`confidence`、`coverage`、`supporting_evidence`、`counter_evidence`、`human_review_needed`。
+
+即使 `survey` 或 `meeting_outline` 使用 `strict` 验证，输出风格仍保持各自任务导向，不会被写成 `gap_analysis` 报告。
+
+## 用户额外要求
+
+首页的“用户额外要求”已经接入系统主流程，而且现在不再只是展示字段。
+
+当前行为：
+
+- 项目创建时写入 `projects.user_requirements`
+- 分析 workflow 会把它带入 `MainWorkflowState`
+- `compare-papers` 阶段在配置在线模型时，会让 LLM 理解这条要求并调整比较重点
+- `generate-output` 阶段在配置在线模型时，会让 LLM 结合 `task_type` 和这条要求组织最终内容
+当前边界：
+
+- 不进入 `extract-fields`
+- 不作为 `validate-gap` 的裁决依据
+
+也就是说，它会影响“强调什么、怎么组织”，但不会改变论文事实抽取，也不会覆盖 gap 验证证据逻辑。
+
+## 论文复用与删除策略
+
+系统按全局 `file_hash` 复用论文，不同项目之间不会重复存同一篇 PDF。
+
+上传时：
+
+- 若论文已存在，则复用已有全局论文记录，并新增项目关联
+- 若论文不存在，则新建全局论文记录、解析结果、chunk 和向量索引
+
+删除项目时：
+
+- 总是删除该项目自己的任务、gap、字段补全结果和项目关联记录
+- 仅当某篇论文不再被任何其他项目引用时，才会继续删除：
+  - 论文数据库记录
+  - chunk
+  - schema
+  - 原始 PDF 文件
+  - 项目解析/导出产物
+  - 对应 Chroma 索引
+
+相关实现见：
+
+- `app/services/project_service.py`
+- `app/services/vector_store_service.py`
+- `app/db/crud.py`
+- `app/utils/file_utils.py`
 
 ## 目录结构
 
 ```text
 paper_survey_agent/
-├── app/
-│   ├── api/
-│   ├── db/
-│   ├── graph/
-│   ├── prompts/
-│   ├── schemas/
-│   ├── services/
-│   └── utils/
-├── data/
-├── frontend/
-│   └── streamlit_app.py
-├── images/
-├── tests/
-├── .env.example
-├── requirements.txt
-└── README.md
+├─ .agents/
+│  └─ skills/
+├─ app/
+│  ├─ api/
+│  ├─ db/
+│  ├─ graph/
+│  ├─ prompts/
+│  ├─ schemas/
+│  ├─ services/
+│  └─ utils/
+├─ data/
+├─ frontend/
+│  └─ streamlit_app.py
+├─ images/
+├─ tests/
+├─ requirements.txt
+└─ README.md
 ```
 
 ## 技术栈
@@ -113,15 +237,17 @@ paper_survey_agent/
 - 流程编排：LangGraph
 - PDF 解析：PyMuPDF
 - 向量库：Chroma
-- Embedding：阿里云百炼 `text-embedding-v4`
-- 生成模型：默认 `qwen3-max`
-- 数据库：SQLite（结构兼容 MySQL）
+- Embedding：DashScope `text-embedding-v4` 或本地回退向量
+- 生成模型：Qwen 兼容接口，默认 `qwen3-max`
+- 数据库：SQLite
 
-## 已实现接口
+## API
 
 ### 核心接口
 
+- `GET /api/projects`
 - `POST /api/projects`
+- `DELETE /api/projects/{project_id}`
 - `POST /api/projects/{project_id}/papers/upload`
 - `POST /api/projects/{project_id}/analyze`
 - `GET /api/tasks/{task_id}`
@@ -141,12 +267,16 @@ paper_survey_agent/
 
 ## 导出类型
 
-当前支持以下导出类型：
+- `survey`
+- `meeting_outline`
+- `gap_analysis`
+- `compare_table`
 
-- `survey`：偏研究脉络、方法对比、结论总结
-- `meeting_outline`：偏组会提纲、重点、亮点、可展示内容
-- `gap_analysis`：偏候选结论、支持证据、反证与最终判断
-- `compare_table`：保留多论文对比表，便于复核
+说明：
+
+- 项目会记录默认任务目标 `target_type`
+- 导出页默认沿用当前项目的任务目标
+- 如需临时切换，可单次选择其他导出类型
 
 ## 环境变量
 
@@ -154,15 +284,18 @@ paper_survey_agent/
 DASHSCOPE_API_KEY=your_key
 QWEN_MODEL_NAME=qwen3-max
 QWEN_MAX_MODEL_NAME=qwen3-max
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 TEXT_EMBEDDING_MODEL_NAME=text-embedding-v4
+ENABLE_CHROMA=true
 DATABASE_URL=sqlite:///./paper_survey_agent.db
 ```
 
-未配置阿里云百炼密钥时：
+未配置 `DASHSCOPE_API_KEY` 时：
 
 - 结构化抽取回退到启发式抽取
-- 向量检索回退到本地词法检索
-- 手动翻译按钮不会得到真实模型翻译结果
+- `compare-papers` 和 `generate-output` 回退到规则化实现
+- 向量检索可回退到本地词法检索
+- 翻译功能不会得到真实在线模型输出
 
 ## 本地运行
 
@@ -173,13 +306,25 @@ uvicorn app.main:app --reload
 streamlit run frontend/streamlit_app.py
 ```
 
+默认地址：
+
+- 后端：`http://127.0.0.1:8000`
+- 前端：`http://localhost:8501`
+
 ## 测试
 
 ```bash
-pytest paper_survey_agent/tests
+pytest paper_survey_agent/tests -q
 ```
 
-说明：
+当前仓库内回归测试已覆盖：
 
-- 如果当前环境未安装 `PyMuPDF`，PDF 解析测试会自动跳过
-- 其余服务测试应可直接运行
+- 比较服务
+- 字段补全服务
+- gap 生成与验证规则
+- 导出逻辑
+
+## 备注
+
+- README 反映的是当前代码状态，不代表未来规划。
+- skill 已接入现有 workflow 语义，但没有额外引入复杂的 skill runtime。
