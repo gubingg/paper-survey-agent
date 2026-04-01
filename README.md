@@ -11,18 +11,18 @@
 ## 界面展示
 
 <p align="center">
-  <img src="images/ui-overview.png" width="92%" alt="系统首页与论文结构化卡片" />
+  <img src="paper_survey_agent/images/ui-overview.png" width="92%" alt="系统首页与论文结构化卡片" />
 </p>
 <p align="center"><em>首页总览与论文结构化卡片</em></p>
 
 <p align="center">
-  <img src="images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
-  <img src="images/gap.png" width="48%" alt="Gap验证页" />
+  <img src="paper_survey_agent/images/ui-compare-v2.png" width="48%" alt="多篇论文横向对比页" />
+  <img src="paper_survey_agent/images/gap.png" width="48%" alt="Gap验证页" />
 </p>
 <p align="center"><em>横向对比页与Gap验证页</em></p>
 
 <p align="center">
-  <img src="images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
+  <img src="paper_survey_agent/images/ui-result.png" width="72%" alt="结果导出与最终展示页" />
 </p>
 <p align="center"><em>结果导出页</em></p>
 
